@@ -10,13 +10,13 @@ pub fn main() {
   gleeunit.main()
 }
 
-type MockNetworkError {
+type MockNetworkErrorResponse {
   ConnectionTimeout
   ServerUnavailable
   InvalidResponse
 }
 
-type MockNetworkResponse {
+type MockNetworkSuccessResponse {
   SuccessfulConnection
   ValidData
 }
