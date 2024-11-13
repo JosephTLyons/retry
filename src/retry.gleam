@@ -1,5 +1,6 @@
 import gleam/bool
 import gleam/erlang/process
+import gleam/list
 import gleam/result
 import gleam/set.{type Set}
 
@@ -77,7 +78,10 @@ fn do_retry(
   errors_acc errors_acc: List(b),
   operation operation: fn(Int) -> Result(a, b),
 ) -> Result(a, RetryError(b)) {
-  use <- bool.guard(remaining < 0, Error(AllAttemptsExhausted(errors_acc)))
+  use <- bool.guard(
+    remaining < 0,
+    Error(AllAttemptsExhausted(errors_acc |> list.reverse)),
+  )
   use error <- result.try_recover(operation(times - remaining))
 
   let allow_error =

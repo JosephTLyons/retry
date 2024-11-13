@@ -60,9 +60,9 @@ pub fn retry_fails_after_exhausting_attempts_test() {
   |> should.equal(
     Error(
       AllAttemptsExhausted([
-        InvalidResponse,
-        ServerUnavailable,
         ConnectionTimeout,
+        ServerUnavailable,
+        InvalidResponse,
       ]),
     ),
   )
