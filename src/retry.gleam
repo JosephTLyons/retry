@@ -7,8 +7,8 @@ import gleam/set.{type Set}
 /// Represents errors that can occur during a retry operation.
 pub type RetryError(a) {
   /// Indicates that all retry attempts have been exhausted.
-  /// Contains a list of all errors encountered during the retry attempts.
-  AllAttemptsExhausted(errors: List(a))
+  /// Contains a list of all errors encountered during the execution attempts.
+  RetriesExhausted(errors: List(a))
 
   /// Indicates that an error occurred which was not in the list of allowed errors.
   /// Contains the specific error that caused the retry to stop.
@@ -37,8 +37,9 @@ pub type RetryError(a) {
 /// ## Returns
 ///
 /// Returns `Ok(a)` if the operation succeeds, or `Error(RetryError(b))` if all
-/// attempts fail. The Error will be either `AllAttemptsExhausted` containing a list
-/// of all encountered errors, or `UnallowedError` containing the unallowed error.
+/// attempts fail. The Error will be either `RetriesExhausted` containing a list
+/// of all encountered errors, or `UnallowedError` containing the first
+/// unallowed error encountered.
 pub fn retry(
   times times: Int,
   sleep_time_in_ms sleep_time_in_ms: Int,
@@ -84,7 +85,7 @@ fn do_retry(
 ) -> Result(a, RetryError(b)) {
   use <- bool.guard(
     remaining < 0,
-    Error(AllAttemptsExhausted(errors_acc |> list.reverse)),
+    Error(RetriesExhausted(errors_acc |> list.reverse)),
   )
   use error <- result.try_recover(operation(times - remaining))
 

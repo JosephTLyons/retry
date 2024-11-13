@@ -3,7 +3,7 @@ import gleam/option.{None, Some}
 import gleeunit
 import gleeunit/should
 import list_extensions.{at}
-import retry.{AllAttemptsExhausted, UnallowedError, retry_with_sleep}
+import retry.{RetriesExhausted, UnallowedError, retry_with_sleep}
 
 pub fn main() {
   gleeunit.main()
@@ -38,7 +38,7 @@ pub fn retry_with_negative_times_returns_error_test() {
     allowed_errors: [],
     operation: result_returning_function,
   )
-  |> should.equal(Error(AllAttemptsExhausted([])))
+  |> should.equal(Error(RetriesExhausted([])))
 }
 
 pub fn retry_fails_after_exhausting_attempts_test() {
@@ -59,11 +59,7 @@ pub fn retry_fails_after_exhausting_attempts_test() {
   )
   |> should.equal(
     Error(
-      AllAttemptsExhausted([
-        ConnectionTimeout,
-        ServerUnavailable,
-        InvalidResponse,
-      ]),
+      RetriesExhausted([ConnectionTimeout, ServerUnavailable, InvalidResponse]),
     ),
   )
 }
