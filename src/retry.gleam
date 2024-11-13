@@ -17,18 +17,22 @@ pub type RetryError(a) {
 
 /// Retries an operation multiple times with a sleep interval between attempts.
 ///
-/// This function will attempt to execute the given operation up to the specified
-/// number of times, sleeping between each attempt. It will stop retrying if the
-/// operation succeeds or if an unallowed error is encountered.
+/// This function will attempt to execute the given operation up to n + 1 times,
+/// where n is the specified number of retries. It will sleep between each attempt
+/// after the initial execution. The function will stop retrying if the operation
+/// succeeds or if an unallowed error is encountered.
 ///
 /// ## Parameters
 ///
-/// - `times`: The maximum number of times to attempt the operation.
+/// - `times`: The number of retry attempts (n). The operation will be executed
+///    n + 1 times in total.
 /// - `sleep_time_in_ms`: The time to sleep between attempts, in milliseconds.
-/// - `allowed_errors`: A list of errors that are allowed and will trigger a retry.
-///   If empty, retry will be attempted for all errors encountered.
-/// - `operation`: The operation to retry. It takes an Int (the current execution number,
-///   zero-indexed) and returns a Result.
+/// - `allowed_errors`: A list of errors that are allowed and will trigger a
+///    retry. If empty, a retry will be attempted for any type of error
+///    encountered.
+/// - `operation`: The operation to retry. It takes an index Int, where 0
+///    corresponds to the initial attempt, and index 1 to n correspond to the
+///    retry attempt count. The operation returns a Result.
 ///
 /// ## Returns
 ///
