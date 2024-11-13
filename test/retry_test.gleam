@@ -3,8 +3,7 @@ import gleam/option.{None, Some}
 import gleeunit
 import gleeunit/should
 import list_extensions.{at}
-import retry.{retry_with_sleep}
-import retry_error.{AllAttemptsExhausted, UnallowedError}
+import retry.{AllAttemptsExhausted, UnallowedError, retry_with_sleep}
 
 pub fn main() {
   gleeunit.main()
