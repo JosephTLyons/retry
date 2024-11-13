@@ -25,8 +25,8 @@ const sleep_time_in_ms = 100
 
 pub fn retry_with_negative_times_returns_error_test() {
   let times = -1
-  let result_returning_operationtion =
-    result_returning_operationtion(times: times, results: [
+  let result_returning_function =
+    result_returning_function(times: times, results: [
       Error(ConnectionTimeout),
       Error(ServerUnavailable),
       Error(InvalidResponse),
@@ -37,15 +37,15 @@ pub fn retry_with_negative_times_returns_error_test() {
     sleep_time_in_ms: sleep_time_in_ms,
     sleep: fake_sleep,
     allowed_errors: [],
-    operation: result_returning_operationtion,
+    operation: result_returning_function,
   )
   |> should.equal(Error(AllAttemptsExhausted([])))
 }
 
 pub fn retry_fails_after_exhausting_attempts_test() {
   let times = 2
-  let result_returning_operationtion =
-    result_returning_operationtion(times: times, results: [
+  let result_returning_function =
+    result_returning_function(times: times, results: [
       Error(ConnectionTimeout),
       Error(ServerUnavailable),
       Error(InvalidResponse),
@@ -56,7 +56,7 @@ pub fn retry_fails_after_exhausting_attempts_test() {
     sleep_time_in_ms: sleep_time_in_ms,
     sleep: fake_sleep,
     allowed_errors: [],
-    operation: result_returning_operationtion,
+    operation: result_returning_function,
   )
   |> should.equal(
     Error(
@@ -71,8 +71,8 @@ pub fn retry_fails_after_exhausting_attempts_test() {
 
 pub fn retry_stops_on_non_allowed_error_test() {
   let times = 3
-  let result_returning_operationtion =
-    result_returning_operationtion(times: times, results: [
+  let result_returning_function =
+    result_returning_function(times: times, results: [
       Error(ConnectionTimeout),
       Error(ServerUnavailable),
       Error(InvalidResponse),
@@ -84,15 +84,15 @@ pub fn retry_stops_on_non_allowed_error_test() {
     sleep_time_in_ms: sleep_time_in_ms,
     sleep: fake_sleep,
     allowed_errors: [ConnectionTimeout, InvalidResponse],
-    operation: result_returning_operationtion,
+    operation: result_returning_function,
   )
   |> should.equal(Error(UnallowedError(ServerUnavailable)))
 }
 
 pub fn retry_succeeds_on_allowed_errors_test() {
   let times = 3
-  let result_returning_operationtion =
-    result_returning_operationtion(times: times, results: [
+  let result_returning_function =
+    result_returning_function(times: times, results: [
       Error(ConnectionTimeout),
       Error(ServerUnavailable),
       Error(InvalidResponse),
@@ -104,15 +104,15 @@ pub fn retry_succeeds_on_allowed_errors_test() {
     sleep_time_in_ms: sleep_time_in_ms,
     sleep: fake_sleep,
     allowed_errors: [ConnectionTimeout, ServerUnavailable, InvalidResponse],
-    operation: result_returning_operationtion,
+    operation: result_returning_function,
   )
   |> should.equal(Ok(SuccessfulConnection))
 }
 
 pub fn retry_succeeds_after_allowed_errors_test() {
   let times = 3
-  let result_returning_operationtion =
-    result_returning_operationtion(times: times, results: [
+  let result_returning_function =
+    result_returning_function(times: times, results: [
       Error(ConnectionTimeout),
       Error(ServerUnavailable),
       Error(InvalidResponse),
@@ -124,7 +124,7 @@ pub fn retry_succeeds_after_allowed_errors_test() {
     sleep_time_in_ms: sleep_time_in_ms,
     sleep: fake_sleep,
     allowed_errors: [],
-    operation: result_returning_operationtion,
+    operation: result_returning_function,
   )
   |> should.equal(Ok(ValidData))
 }
@@ -133,7 +133,7 @@ fn fake_sleep(_) {
   Nil
 }
 
-fn result_returning_operationtion(
+fn result_returning_function(
   times times: Int,
   results results: List(Result(a, b)),
 ) -> fn(Int) -> Result(a, b) {
