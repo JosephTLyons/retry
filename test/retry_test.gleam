@@ -12,15 +12,15 @@ pub fn main() {
   gleeunit.main()
 }
 
+type MockNetworkSuccessResponse {
+  SuccessfulConnection
+  ValidData
+}
+
 type MockNetworkErrorResponse {
   ConnectionTimeout
   ServerUnavailable
   InvalidResponse
-}
-
-type MockNetworkSuccessResponse {
-  SuccessfulConnection
-  ValidData
 }
 
 const wait_time_in_ms = 100
