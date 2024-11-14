@@ -31,7 +31,7 @@ pub fn flakey_function() -> Result(
 }
 
 pub fn main() {
-  use _ <- retry(times: 3, wait_time_in_ms: 100, allow: AllErrors)
+  use <- retry(times: 3, wait_time_in_ms: 100, allow: AllErrors)
   flakey_function()
 }
 ```
