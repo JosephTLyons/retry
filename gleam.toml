@@ -1,16 +1,9 @@
 name = "retry"
-version = "1.0.0"
+version = "0.1.0"
 
-# Fill out these fields if you intend to generate HTML documentation or publish
-# your project to the Hex package manager.
-#
-# description = ""
-# licences = ["Apache-2.0"]
-# repository = { type = "github", user = "", repo = "" }
-# links = [{ title = "Website", href = "" }]
-#
-# For a full reference of all the available options, you can have a look at
-# https://gleam.run/writing-gleam/gleam-toml/.
+description = "A Gleam function that can be used to retry code that can fail."
+licences = ["Apache-2.0"]
+repository = { type = "github", user = "JosephTLyons", repo = "retry" }
 
 [dependencies]
 gleam_stdlib = ">= 0.34.0 and < 2.0.0"
@@ -18,7 +11,3 @@ gleam_erlang = ">= 0.30.0 and < 1.0.0"
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
-
-# TODO: This file
-# TODO: README.md
-# TODO: License file and any other files (see lenient_parse)
