@@ -35,15 +35,15 @@ type RetryResult(a, b) =
 
 @internal
 pub type RetryData(a, b) {
-  RetryData(result: RetryResult(a, b), sleep_times: List(Int))
+  RetryData(result: RetryResult(a, b), wait_times: List(Int))
 }
 
 // TODO: Update documentation
 
-/// Retries an operation multiple times with a sleep interval between attempts.
+/// Retries an operation multiple times with a wait interval between attempts.
 ///
 /// This function will attempt to execute the given operation up to n + 1 times,
-/// where n is the specified number of retries. It will sleep between each attempt
+/// where n is the specified number of retries. It will wait between each attempt
 /// after the initial execution. The function will stop retrying if the operation
 /// succeeds or if an unallowed error is encountered.
 ///
@@ -51,7 +51,7 @@ pub type RetryData(a, b) {
 ///
 /// - `times`: The number of retry attempts (n). The operation will be executed
 ///    n + 1 times in total.
-/// - `sleep_time_in_ms`: The time to sleep between attempts, in milliseconds.
+/// - `wait_time_in_ms`: The time to wait between attempts, in milliseconds.
 /// - `allow`: A list of errors that are allowed and will trigger a
 ///    retry. If empty, a retry will be attempted for any type of error
 ///    encountered.
@@ -67,14 +67,14 @@ pub type RetryData(a, b) {
 /// unallowed error encountered.
 pub fn retry(
   times times: Int,
-  sleep_time_in_ms sleep_time_in_ms: Int,
+  wait_time_in_ms wait_time_in_ms: Int,
   allow allow: Allow(b),
   operation operation: fn(Int) -> Result(a, b),
 ) -> RetryResult(a, b) {
-  retry_with_sleep(
+  retry_with_wait(
     times: times,
-    sleep_time_in_ms: sleep_time_in_ms,
-    sleep: sleep,
+    wait_time_in_ms: wait_time_in_ms,
+    wait: wait,
     backoff_multiplier: 1,
     allow: allow,
     operation: operation,
@@ -83,15 +83,15 @@ pub fn retry(
 
 pub fn retry_with_backoff_multiplier(
   times times: Int,
-  sleep_time_in_ms sleep_time_in_ms: Int,
+  wait_time_in_ms wait_time_in_ms: Int,
   backoff_multiplier backoff_multiplier: Int,
   allow allow: Allow(b),
   operation operation: fn(Int) -> Result(a, b),
 ) -> RetryResult(a, b) {
-  retry_with_sleep(
+  retry_with_wait(
     times: times,
-    sleep_time_in_ms: sleep_time_in_ms,
-    sleep: sleep,
+    wait_time_in_ms: wait_time_in_ms,
+    wait: wait,
     backoff_multiplier: backoff_multiplier,
     allow: allow,
     operation: operation,
@@ -99,10 +99,10 @@ pub fn retry_with_backoff_multiplier(
 }
 
 @internal
-pub fn retry_with_sleep(
+pub fn retry_with_wait(
   times times: Int,
-  sleep_time_in_ms sleep_time_in_ms: Int,
-  sleep sleep: fn(Int) -> Nil,
+  wait_time_in_ms wait_time_in_ms: Int,
+  wait wait: fn(Int) -> Nil,
   backoff_multiplier backoff_multiplier: Int,
   allow allow: Allow(b),
   operation operation: fn(Int) -> Result(a, b),
@@ -110,12 +110,12 @@ pub fn retry_with_sleep(
   do_retry(
     times: times,
     remaining: times,
-    sleep_time_in_ms: sleep_time_in_ms,
-    sleep: sleep,
+    wait_time_in_ms: wait_time_in_ms,
+    wait: wait,
     backoff_multiplier: backoff_multiplier,
     allowed_errors: allow |> to_set,
     errors_acc: [],
-    sleep_time_acc: [],
+    wait_time_acc: [],
     operation: operation,
   )
 }
@@ -124,36 +124,36 @@ pub fn retry_with_sleep(
 fn do_retry(
   times times: Int,
   remaining remaining: Int,
-  sleep_time_in_ms sleep_time_in_ms: Int,
-  sleep sleep: fn(Int) -> Nil,
+  wait_time_in_ms wait_time_in_ms: Int,
+  wait wait: fn(Int) -> Nil,
   backoff_multiplier backoff_multiplier: Int,
   allowed_errors allowed_errors: Set(b),
   errors_acc errors_acc: List(b),
-  sleep_time_acc sleep_time_acc: List(Int),
+  wait_time_acc wait_time_acc: List(Int),
   operation operation: fn(Int) -> Result(a, b),
 ) -> RetryData(a, b) {
   use <- bool.guard(
     remaining < 0,
     RetryData(
       result: Error(RetriesExhausted(errors_acc |> list.reverse)),
-      sleep_times: sleep_time_acc |> list.reverse,
+      wait_times: wait_time_acc |> list.reverse,
     ),
   )
 
-  let #(sleep_time_acc, sleep_time_in_ms) = case remaining < times {
+  let #(wait_time_acc, wait_time_in_ms) = case remaining < times {
     True -> {
-      sleep(sleep_time_in_ms)
+      wait(wait_time_in_ms)
       #(
-        [sleep_time_in_ms, ..sleep_time_acc],
-        sleep_time_in_ms * backoff_multiplier,
+        [wait_time_in_ms, ..wait_time_acc],
+        wait_time_in_ms * backoff_multiplier,
       )
     }
-    False -> #(sleep_time_acc, sleep_time_in_ms)
+    False -> #(wait_time_acc, wait_time_in_ms)
   }
 
   case operation(times - remaining) {
     Ok(result) ->
-      RetryData(result: Ok(result), sleep_times: sleep_time_acc |> list.reverse)
+      RetryData(result: Ok(result), wait_times: wait_time_acc |> list.reverse)
 
     Error(error) -> {
       let allow_error =
@@ -162,26 +162,29 @@ fn do_retry(
         !allow_error,
         RetryData(
           result: Error(UnallowedError(error)),
-          sleep_times: sleep_time_acc |> list.reverse,
+          wait_times: wait_time_acc |> list.reverse,
         ),
       )
 
       do_retry(
         times: times,
         remaining: remaining - 1,
-        sleep_time_in_ms: sleep_time_in_ms,
-        sleep: sleep,
+        wait_time_in_ms: wait_time_in_ms,
+        wait: wait,
         backoff_multiplier: backoff_multiplier,
         allowed_errors: allowed_errors,
         errors_acc: [error, ..errors_acc],
-        sleep_time_acc: sleep_time_acc,
+        wait_time_acc: wait_time_acc,
         operation: operation,
       )
     }
   }
 }
 
-fn sleep(sleep_time_in_ms: Int) {
-  process.sleep(sleep_time_in_ms)
+fn wait(wait_time_in_ms: Int) -> Nil {
+  let subject = process.new_subject()
+  let _ = subject |> process.send_after(wait_time_in_ms, Nil)
+  let _ = subject |> process.receive(within: wait_time_in_ms)
+  Nil
 }
 // TODO: Research if we can omit the Int in the callback
