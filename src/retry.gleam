@@ -92,7 +92,7 @@ pub fn retry_with_backoff_multiplier(
   wait_time_in_ms wait_time_in_ms: Int,
   backoff_multiplier backoff_multiplier: Int,
   allow allow: Allow(b),
-  operation operation: fn(Int) -> Result(a, b),
+  operation operation: fn() -> Result(a, b),
 ) -> RetryResult(a, b) {
   retry_with_wait(
     times: times,
@@ -100,7 +100,7 @@ pub fn retry_with_backoff_multiplier(
     wait: wait,
     backoff_multiplier: backoff_multiplier,
     allow: allow,
-    operation: operation,
+    operation: fn(_) { operation() },
   ).result
 }
 
