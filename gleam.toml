@@ -1,7 +1,7 @@
 name = "retry"
 version = "0.1.0"
 
-description = "A Gleam function that can be used to retry code that can fail."
+description = "Gleam functions to rerun code that can fail."
 licences = ["Apache-2.0"]
 repository = { type = "github", user = "JosephTLyons", repo = "retry" }
 
