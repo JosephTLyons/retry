@@ -9,8 +9,8 @@ pub type RetryError(a) {
   /// Contains a list of all errors encountered during the execution attempts.
   RetriesExhausted(errors: List(a))
 
-  /// Indicates that an error occurred which was not in the list of allowed errors.
-  /// Contains the specific error that caused the retry to stop.
+  /// Indicates that an error occurred which was not in the list of allowed
+  /// errors. Contains the specific error that caused the retry to stop.
   UnallowedError(error: a)
 }
 
@@ -38,8 +38,6 @@ pub type RetryData(a, b) {
   RetryData(result: RetryResult(a, b), wait_times: List(Int))
 }
 
-// TODO: Update documentation
-
 /// Retries an operation multiple times with a wait interval between attempts.
 ///
 /// This function will attempt to execute the given operation up to n + 1 times,
@@ -52,8 +50,9 @@ pub type RetryData(a, b) {
 /// - `times`: The number of retry attempts (n). The operation will be executed
 ///    n + 1 times in total.
 /// - `wait_time_in_ms`: The time to wait between attempts, in milliseconds.
-/// - `allow`: A list of errors that are allowed and will trigger a
-///    retry. If empty, a retry will be attempted for any type of error
+/// - `allow`: An `Allow` type specifying which errors are allowed and will
+///    trigger a
+///    retry. If `AllErrors`, a retry will be attempted for any type of error
 ///    encountered.
 /// - `operation`: The operation to retry. It takes an index Int, where 0
 ///    corresponds to the initial attempt, and index 1 to n correspond to the
