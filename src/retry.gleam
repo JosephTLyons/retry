@@ -190,6 +190,6 @@ fn do_retry(
 fn wait(wait_time_in_ms: Int) -> Nil {
   let subject = process.new_subject()
   let _ = subject |> process.send_after(wait_time_in_ms, Nil)
-  let _ = subject |> process.receive(within: wait_time_in_ms)
+  let _ = subject |> process.receive(within: wait_time_in_ms * 2)
   Nil
 }
