@@ -54,9 +54,7 @@ pub type RetryData(a, b) {
 ///    trigger a
 ///    retry. If `AllErrors`, a retry will be attempted for any type of error
 ///    encountered.
-/// - `operation`: The operation to retry. It takes an index Int, where 0
-///    corresponds to the initial attempt, and index 1 to n correspond to the
-///    retry attempt count. The operation returns a Result.
+/// - `operation`: The operation to retry.
 ///
 /// ## Returns
 ///
