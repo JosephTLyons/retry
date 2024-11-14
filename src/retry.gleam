@@ -161,7 +161,6 @@ fn do_retry(
   case operation(times - remaining) {
     Ok(result) ->
       RetryData(result: Ok(result), wait_times: wait_time_acc |> list.reverse)
-
     Error(error) -> {
       let allow_error =
         set.is_empty(allowed_errors) || set.contains(allowed_errors, error)
