@@ -8,15 +8,33 @@
 ```sh
 gleam add retry@1
 ```
+
 ```gleam
 import retry
 
+pub type NetworkSuccessResponse {
+  SuccessfulConnection
+  ValidData
+}
+
+pub type NetworkErrorResponse {
+  ConnectionTimeout
+  ServerUnavailable
+  InvalidResponse
+}
+
+pub fn flakey_function() -> Result(
+  NetworkSuccessResponse,
+  NetworkSuccessResponse,
+) {
+  // A function that produces unpredictable results
+}
+
 pub fn main() {
-  // TODO: An example of the project in use
+  use _ <- retry(times: 3, wait_time_in_ms: 100, allow: AllErrors)
+  flakey_function()
 }
 ```
-
-Further documentation can be found at <https://hexdocs.pm/retry>.
 
 ## Targets
 
