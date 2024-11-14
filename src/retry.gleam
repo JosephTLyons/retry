@@ -68,7 +68,7 @@ pub fn retry(
   times times: Int,
   wait_time_in_ms wait_time_in_ms: Int,
   allow allow: Allow(b),
-  operation operation: fn(Int) -> Result(a, b),
+  operation operation: fn() -> Result(a, b),
 ) -> RetryResult(a, b) {
   retry_with_wait(
     times: times,
@@ -76,7 +76,7 @@ pub fn retry(
     wait: wait,
     backoff_multiplier: 1,
     allow: allow,
-    operation: operation,
+    operation: fn(_) { operation() },
   ).result
 }
 
