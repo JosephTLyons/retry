@@ -80,6 +80,15 @@ pub fn retry(
   ).result
 }
 
+/// Retries an operation multiple times with a wait interval between attempts.
+///
+/// This function behaves the same as `retry()`, with the following differences:
+///
+/// ## Parameters
+///
+/// - `backoff_multiplier`: A multiplier applied to the wait time after each
+///    retry attempt. This creates an exponential backoff effect, increasing
+///    the wait time between subsequent retries.
 pub fn retry_with_backoff_multiplier(
   times times: Int,
   wait_time_in_ms wait_time_in_ms: Int,
