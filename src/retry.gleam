@@ -128,7 +128,6 @@ pub fn retry_with_wait(
   )
 }
 
-// TODO: Clean up logic, has to be a better way
 fn do_retry(
   times times: Int,
   remaining remaining: Int,
@@ -195,4 +194,3 @@ fn wait(wait_time_in_ms: Int) -> Nil {
   let _ = subject |> process.receive(within: wait_time_in_ms)
   Nil
 }
-// TODO: Research if we can omit the Int in the callback
