@@ -132,17 +132,13 @@ fn do_execute(
     ),
   )
 
-  // Clean this logic up - feels #yucky
-  let duration = case attempt_number == 0 {
-    True -> 0
-    False -> {
-      case wait_time_acc |> list.first {
-        Ok(0) | Error(_) -> config.duration
-        Ok(duration) -> duration |> config.next_wait_time
-      }
-      |> int.max(0)
+  let duration =
+    case wait_time_acc {
+      [] -> 0
+      [0, ..] -> config.duration
+      [duration, ..] -> duration |> config.next_wait_time
     }
-  }
+    |> int.max(0)
 
   wait_function(duration)
 
