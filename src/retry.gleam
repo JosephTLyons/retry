@@ -70,7 +70,7 @@ pub fn max_attempts(
   Config(..config, max_attempts: max_attempts)
 }
 
-/// Sets the time to wait between retry attempts.
+/// Sets the time to wait (in ms) between retry attempts.
 pub fn wait(config: Config(a, b), duration duration: Int) -> Config(a, b) {
   Config(..config, duration: duration)
 }
