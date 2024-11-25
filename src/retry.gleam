@@ -31,7 +31,7 @@ pub type RetryData(a, b) {
 pub opaque type Config(a, b) {
   Config(
     max_attempts: Int,
-    duration: Int,
+    wait_time: Int,
     next_wait_time: fn(Int) -> Int,
     allow: fn(b) -> Bool,
   )
@@ -40,13 +40,13 @@ pub opaque type Config(a, b) {
 /// Creates a new configuration with default values.
 /// Default values are:
 /// - `max_attempts`: 3
-/// - `duration`: 500 (ms)
+/// - `wait_time`: 500 (ms)
 /// - `next_wait_time`: constant
 /// - `allow`: all errors
 pub fn new() -> Config(a, b) {
   Config(
     max_attempts: 3,
-    duration: 500,
+    wait_time: 500,
     next_wait_time: function.identity,
     allow: fn(_) { True },
   )
@@ -61,8 +61,8 @@ pub fn max_attempts(
 }
 
 /// Sets the time to wait (in ms) between retry attempts.
-pub fn wait(config: Config(a, b), duration duration: Int) -> Config(a, b) {
-  Config(..config, duration: duration)
+pub fn wait(config: Config(a, b), wait_time wait_time: Int) -> Config(a, b) {
+  Config(..config, wait_time: wait_time)
 }
 
 /// Sets the backoff strategy for increasing wait times between retry attempts.
@@ -132,17 +132,17 @@ fn do_execute(
     ),
   )
 
-  let duration =
+  let wait_time =
     case wait_time_acc {
       [] -> 0
-      [0, ..] -> config.duration
-      [duration, ..] -> duration |> config.next_wait_time
+      [0, ..] -> config.wait_time
+      [wait_time, ..] -> wait_time |> config.next_wait_time
     }
     |> int.max(0)
 
-  wait_function(duration)
+  wait_function(wait_time)
 
-  let wait_time_acc = [duration, ..wait_time_acc]
+  let wait_time_acc = [wait_time, ..wait_time_acc]
 
   case operation(attempt_number) {
     Ok(result) ->
@@ -168,9 +168,9 @@ fn do_execute(
   }
 }
 
-fn wait_function(duration duration: Int) -> Nil {
+fn wait_function(wait_time wait_time: Int) -> Nil {
   let subject = process.new_subject()
-  let _ = subject |> process.send_after(duration, Nil)
-  let _ = subject |> process.receive(within: duration * 2)
+  let _ = subject |> process.send_after(wait_time, Nil)
+  let _ = subject |> process.receive(within: wait_time * 2)
   Nil
 }
