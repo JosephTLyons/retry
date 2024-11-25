@@ -45,7 +45,6 @@ pub type NetworkError {
 
 // TODO: Function ordering here
 // Fuzzying: https://discord.com/channels/768594524158427167/768594524158427170/1309557318731698216
-// TODO: naming of test functions
 // TODO: Double check documentation
 
 /// Creates a new configuration with default values.

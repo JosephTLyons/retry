@@ -20,7 +20,7 @@ type MockNetworkErrorResponse {
   InvalidResponse
 }
 
-pub fn retry_with_negative_times_returns_retries_exhausted_error_test() {
+pub fn negative_retry_attempts_returns_retries_exhausted_error_test() {
   let times = -1
   let result_returning_function =
     result_returning_function(times: times, results: [
@@ -41,7 +41,7 @@ pub fn retry_with_negative_times_returns_retries_exhausted_error_test() {
   )
 }
 
-pub fn retry_fails_after_exhausting_attempts_test() {
+pub fn retry_exhausts_all_attempts_and_fails_test() {
   let times = 3
   let result_returning_function =
     result_returning_function(times: times, results: [
@@ -105,7 +105,7 @@ pub fn retry_fails_on_non_allowed_error_test() {
   )
 }
 
-pub fn retry_succeeds_on_allow_test() {
+pub fn retry_succeeds_on_allowed_errors_test() {
   let times = 3
   let result_returning_function =
     result_returning_function(times: times, results: [
@@ -138,7 +138,7 @@ pub fn retry_succeeds_on_allow_test() {
   )
 }
 
-pub fn retry_succeeds_with_all_errors_test() {
+pub fn retry_succeeds_when_all_errors_are_allowed_test() {
   let times = 4
   let result_returning_function =
     result_returning_function(times: times, results: [
@@ -156,7 +156,6 @@ pub fn retry_succeeds_with_all_errors_test() {
   retry.new()
   |> retry.max_attempts(times)
   |> retry.wait(100)
-  |> retry.allow(fn(_) { True })
   |> retry.execute_with_wait(
     result_returning_function,
     wait_function: fake_wait,
@@ -289,7 +288,7 @@ pub fn retry_with_multiplier_succeeds_after_allowed_errors_test() {
   )
 }
 
-pub fn retry_with_configuration_that_results_in_negative_wait_time_test() {
+pub fn retry_with_negative_wait_time_configuration_test() {
   let times = 4
   let result_returning_function =
     result_returning_function(times: times, results: [
