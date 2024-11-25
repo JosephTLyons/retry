@@ -23,7 +23,7 @@ pub type NetworkError {
 }
 
 pub fn main() {
-  retry.new(max_attempts: 5, wait_time: 100)
+  retry.new(max_attempts: 5, wait_time: 1000)
   // Optional configuration
   |> retry.allow(allow: fn(error) {
     case error {
@@ -34,6 +34,8 @@ pub fn main() {
   })
   // Optional configuration
   |> retry.backoff(next_wait_time: int.multiply(_, 2))
+  // Optional configuration
+  |> retry.max_wait_time(10000)
   |> retry.execute(operation: fn() {
     case int.random(4) {
       0 -> Error(ServerDown)

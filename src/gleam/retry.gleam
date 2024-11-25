@@ -1,13 +1,11 @@
-//// `retry` executes a fallible operation multiple times. Various aspects can
-//// be configured: the number of retry attempts, the duration between attempts,
-//// the strategy for adjusting wait times, and the types of errors that should
-//// trigger a retry.
+//// `retry` executes a fallible operation multiple times.
 
 import gleam/bool
 import gleam/erlang/process
 import gleam/function
 import gleam/int
 import gleam/list
+import gleam/option.{type Option, None, Some}
 
 /// Represents errors that can occur during a retry attempts.
 pub type RetryError(a) {
@@ -34,6 +32,7 @@ pub opaque type Config(a, b) {
   Config(
     max_attempts: Int,
     wait_time: Int,
+    max_wait_time: Option(Int),
     next_wait_time: fn(Int) -> Int,
     allow: fn(b) -> Bool,
   )
@@ -45,6 +44,7 @@ pub opaque type Config(a, b) {
 /// Configuration defaults:
 /// - `next_wait_time`: constant
 /// - `allow`: all errors
+/// - `max_wait_time`: None
 pub fn new(
   max_attempts max_attempts: Int,
   wait_time wait_time: Int,
@@ -52,6 +52,7 @@ pub fn new(
   Config(
     max_attempts: max_attempts,
     wait_time: wait_time,
+    max_wait_time: None,
     next_wait_time: function.identity,
     allow: fn(_) { True },
   )
@@ -73,6 +74,14 @@ pub fn backoff(
 /// should trigger a retry, and `False` for errors that should not.
 pub fn allow(config: Config(a, b), allow allow: fn(b) -> Bool) -> Config(a, b) {
   Config(..config, allow: allow)
+}
+
+/// Sets a maximum time limit to wait between retries.
+pub fn max_wait_time(
+  config: Config(a, b),
+  max_wait_time max_wait_time: Int,
+) -> Config(a, b) {
+  Config(..config, max_wait_time: Some(max_wait_time))
 }
 
 /// Initiates the retry operation with the provided configuration and operation.
@@ -121,13 +130,14 @@ fn do_execute(
     ),
   )
 
-  let wait_time =
-    case wait_time_acc {
-      [] -> 0
-      [0, ..] -> config.wait_time
-      [wait_time, ..] -> wait_time |> config.next_wait_time
-    }
-    |> int.max(0)
+  let wait_time = case wait_time_acc {
+    [] -> 0
+    [0, ..] -> config.wait_time
+    [wait_time, ..] -> wait_time |> config.next_wait_time
+  }
+
+  let max_wait_time = config.max_wait_time |> option.unwrap(wait_time)
+  let wait_time = wait_time |> int.clamp(0, max_wait_time)
 
   wait_function(wait_time)
 
