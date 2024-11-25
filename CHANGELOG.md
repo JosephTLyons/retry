@@ -1,5 +1,8 @@
 # Changelog
 
+Breaking changes
+update examples
+
 ## v0.2.0 - 2024-XX-XX
 
 - Added support for `max_wait_time()`.
