@@ -9,14 +9,16 @@ import gleam/function
 import gleam/int
 import gleam/list
 
-/// Represents errors that can occur during a retry operation.
+/// Represents errors that can occur during a retry attempts.
 pub type RetryError(a) {
-  /// Indicates that all retry attempts have been exhausted.
-  /// Contains a list of all errors encountered during the execution attempts.
+  /// Indicates that all retry attempts have been exhausted. Contains an ordered
+  /// list of all errors encountered during the execution attempts.
   RetriesExhausted(errors: List(a))
 
-  /// Indicates that an error occurred which was not in the list of allowed
-  /// errors. Contains the specific error that caused the retry to stop.
+  /// Indicates that `retry` ran into an error that wasn't allowed. Contains the
+  /// specific error that caused the retry to stop. By default, all errors are
+  /// allowed. Use the `allow()` function to specify which errors should trigger
+  /// a retry.
   UnallowedError(error: a)
 }
 
@@ -37,7 +39,9 @@ pub opaque type Config(a, b) {
   )
 }
 
-/// Creates a new configuration with the specified max attempts and wait time.
+/// Creates a new configuration with the specified `max_attempts` and
+/// `wait_time`.
+///
 /// Configuration defaults:
 /// - `next_wait_time`: constant
 /// - `allow`: all errors
@@ -54,8 +58,8 @@ pub fn new(
 }
 
 /// Sets the backoff strategy for increasing wait times between retry attempts.
-/// Expects a function that takes the previous wait time and returns a new wait
-/// time.
+/// Expects a function that takes the previous wait time and returns a the next
+/// wait time.
 pub fn backoff(
   config: Config(a, b),
   next_wait_time next_wait_time: fn(Int) -> Int,
@@ -73,10 +77,7 @@ pub fn allow(config: Config(a, b), allow allow: fn(b) -> Bool) -> Config(a, b) {
 
 /// Initiates the retry operation with the provided configuration and operation.
 ///
-/// Returns `Ok(a)` if the operation succeeds, or `Error(RetryError(b))` if all
-/// attempts fail. The Error will be either `RetriesExhausted` containing a list
-/// of all encountered errors, or `UnallowedError` containing the first
-/// unallowed error encountered.
+/// Returns `Ok(a)` if the operation succeeds, or `Error(RetryError(b))`.
 pub fn execute(
   config: Config(a, b),
   operation operation: fn() -> Result(a, b),
