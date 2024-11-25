@@ -287,18 +287,51 @@ pub fn retry_with_negative_wait_time_configuration_test() {
 
   retry.new(times, -100)
   |> retry.backoff(int.subtract(_, 1000))
-  |> retry.allow(fn(error) {
-    case error {
-      ConnectionTimeout | ServerUnavailable -> True
-      _ -> False
-    }
-  })
   |> retry.execute_with_wait(
     result_returning_function,
     wait_function: fake_wait,
   )
   |> should.equal(
     RetryData(result: Ok(SuccessfulConnection), wait_times: [0, 0, 0]),
+  )
+}
+
+pub fn retry_with_max_wait_time_configuration_test() {
+  let times = 5
+  let result_returning_function =
+    result_returning_function(times: times, results: [
+      // 1, wait 0
+      Error(ConnectionTimeout),
+      // 2, wait 500
+      Error(ServerUnavailable),
+      // 3, wait 1000
+      Error(ConnectionTimeout),
+      // 4, wait 1000
+      Error(ServerUnavailable),
+      // 5, wait 1000
+      // succeed
+      Ok(SuccessfulConnection),
+      // Doesn't reach
+      Error(InvalidResponse),
+    ])
+
+  retry.new(times, 500)
+  |> retry.backoff(int.multiply(_, 2))
+  |> retry.allow(fn(error) {
+    case error {
+      ConnectionTimeout | ServerUnavailable -> True
+      _ -> False
+    }
+  })
+  |> retry.max_wait_time(1000)
+  |> retry.execute_with_wait(
+    result_returning_function,
+    wait_function: fake_wait,
+  )
+  |> should.equal(
+    RetryData(result: Ok(SuccessfulConnection), wait_times: [
+      0, 500, 1000, 1000, 1000,
+    ]),
   )
 }
 
