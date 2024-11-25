@@ -29,9 +29,7 @@ pub fn negative_retry_attempts_returns_retries_exhausted_error_test() {
       Error(InvalidResponse),
     ])
 
-  retry.new()
-  |> retry.max_attempts(times)
-  |> retry.wait(100)
+  retry.new(times, 100)
   |> retry.execute_with_wait(
     result_returning_function,
     wait_function: fake_wait,
@@ -54,9 +52,7 @@ pub fn retry_exhausts_all_attempts_and_fails_test() {
       Error(InvalidResponse),
     ])
 
-  retry.new()
-  |> retry.max_attempts(times)
-  |> retry.wait(100)
+  retry.new(times, 100)
   |> retry.execute_with_wait(
     result_returning_function,
     wait_function: fake_wait,
@@ -85,9 +81,7 @@ pub fn retry_fails_on_non_allowed_error_test() {
       Ok(SuccessfulConnection),
     ])
 
-  retry.new()
-  |> retry.max_attempts(times)
-  |> retry.wait(100)
+  retry.new(times, 100)
   |> retry.allow(fn(error) {
     case error {
       ConnectionTimeout | InvalidResponse -> True
@@ -120,9 +114,7 @@ pub fn retry_succeeds_on_allowed_errors_test() {
       Error(InvalidResponse),
     ])
 
-  retry.new()
-  |> retry.max_attempts(times)
-  |> retry.wait(100)
+  retry.new(times, 100)
   |> retry.allow(fn(error) {
     case error {
       ConnectionTimeout | ServerUnavailable -> True
@@ -153,9 +145,7 @@ pub fn retry_succeeds_when_all_errors_are_allowed_test() {
       Ok(ValidData),
     ])
 
-  retry.new()
-  |> retry.max_attempts(times)
-  |> retry.wait(100)
+  retry.new(times, 100)
   |> retry.execute_with_wait(
     result_returning_function,
     wait_function: fake_wait,
@@ -182,9 +172,7 @@ pub fn retry_with_exponential_backoff_test() {
       Ok(ValidData),
     ])
 
-  retry.new()
-  |> retry.max_attempts(times)
-  |> retry.wait(100)
+  retry.new(times, 100)
   |> retry.backoff(int.multiply(_, 2))
   |> retry.allow(fn(_) { True })
   |> retry.execute_with_wait(
@@ -211,9 +199,7 @@ pub fn retry_with_linear_backoff_test() {
       Ok(ValidData),
     ])
 
-  retry.new()
-  |> retry.max_attempts(times)
-  |> retry.wait(100)
+  retry.new(times, 100)
   |> retry.backoff(int.add(_, 100))
   |> retry.allow(fn(_) { True })
   |> retry.execute_with_wait(
@@ -240,9 +226,7 @@ pub fn retry_with_custom_backoff_test() {
       Ok(ValidData),
     ])
 
-  retry.new()
-  |> retry.max_attempts(times)
-  |> retry.wait(100)
+  retry.new(times, 100)
   |> retry.backoff(fn(wait) { wait |> int.add(100) |> int.multiply(2) })
   |> retry.allow(fn(_) { True })
   |> retry.execute_with_wait(
@@ -269,9 +253,7 @@ pub fn retry_with_multiplier_succeeds_after_allowed_errors_test() {
       Error(InvalidResponse),
     ])
 
-  retry.new()
-  |> retry.max_attempts(times)
-  |> retry.wait(100)
+  retry.new(times, 100)
   |> retry.backoff(int.multiply(_, 3))
   |> retry.allow(fn(error) {
     case error {
@@ -303,9 +285,7 @@ pub fn retry_with_negative_wait_time_configuration_test() {
       Error(InvalidResponse),
     ])
 
-  retry.new()
-  |> retry.max_attempts(times)
-  |> retry.wait(-100)
+  retry.new(times, -100)
   |> retry.backoff(int.subtract(_, 1000))
   |> retry.allow(fn(error) {
     case error {

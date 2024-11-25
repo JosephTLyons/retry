@@ -37,32 +37,20 @@ pub opaque type Config(a, b) {
   )
 }
 
-/// Creates a new configuration with default values.
-/// Default values are:
-/// - `max_attempts`: 3
-/// - `wait_time`: 500 (ms)
+/// Creates a new configuration with the specified max attempts and wait time.
+/// Configuration defaults:
 /// - `next_wait_time`: constant
 /// - `allow`: all errors
-pub fn new() -> Config(a, b) {
+pub fn new(
+  max_attempts max_attempts: Int,
+  wait_time wait_time: Int,
+) -> Config(a, b) {
   Config(
-    max_attempts: 3,
-    wait_time: 500,
+    max_attempts: max_attempts,
+    wait_time: wait_time,
     next_wait_time: function.identity,
     allow: fn(_) { True },
   )
-}
-
-/// Sets the number of times to attempt the operation.
-pub fn max_attempts(
-  config: Config(a, b),
-  max_attempts max_attempts: Int,
-) -> Config(a, b) {
-  Config(..config, max_attempts: max_attempts)
-}
-
-/// Sets the time to wait (in ms) between retry attempts.
-pub fn wait(config: Config(a, b), wait_time wait_time: Int) -> Config(a, b) {
-  Config(..config, wait_time: wait_time)
 }
 
 /// Sets the backoff strategy for increasing wait times between retry attempts.

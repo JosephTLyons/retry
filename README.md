@@ -23,11 +23,7 @@ pub type NetworkError {
 }
 
 pub fn main() {
-  retry.new()
-  // Optional configuration
-  |> retry.max_attempts(max_attempts: 5)
-  // Optional configuration
-  |> retry.wait(wait_time: 100)
+  retry.new(max_attempts: 5, wait_time: 100)
   // Optional configuration
   |> retry.allow(allow: fn(error) {
     case error {
