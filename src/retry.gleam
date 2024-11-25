@@ -6,7 +6,6 @@
 import gleam/bool
 import gleam/erlang/process
 import gleam/int
-import gleam/io
 import gleam/list
 
 /// Represents errors that can occur during a retry operation.
@@ -37,23 +36,16 @@ pub opaque type Config(a, b) {
   )
 }
 
-// TODO: Remove
-pub fn main() {
-  new()
-  |> max_attempts(max_attempts: 5)
-  |> wait(duration: 100)
-  |> allow(allow: fn(_) { True })
-  |> backoff(next_wait_time: fn(wait) {
-    wait |> int.add(200) |> int.multiply(2)
-  })
-  |> execute(operation: fn() { Error(Nil) |> io.debug })
+pub type NetworkError {
+  ServerDown
+  Timeout(Int)
+  InvalidStatusCode(Int)
+  InvalidResponseBody(String)
 }
 
 // TODO: Function ordering here
 // Fuzzying: https://discord.com/channels/768594524158427167/768594524158427170/1309557318731698216
 // TODO: naming of test functions
-// TODO: Migrate and update documentation
-// TODO: README.md, examples
 // TODO: Double check documentation
 
 /// Creates a new configuration with default values.
