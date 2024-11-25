@@ -5,6 +5,7 @@
 
 import gleam/bool
 import gleam/erlang/process
+import gleam/function
 import gleam/int
 import gleam/list
 
@@ -57,7 +58,7 @@ pub fn new() -> Config(a, b) {
   Config(
     max_attempts: 3,
     duration: 500,
-    next_wait_time: fn(duration: Int) { duration },
+    next_wait_time: function.identity,
     allow: fn(_) { True },
   )
 }
