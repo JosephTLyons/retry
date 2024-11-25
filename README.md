@@ -13,7 +13,7 @@ gleam add retry@1
 
 ```gleam
 import gleam/int
-import retry
+import gleam/retry
 
 pub type NetworkError {
   ServerDown
