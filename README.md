@@ -3,7 +3,7 @@
 [![Package Version](https://img.shields.io/hexpm/v/retry)](https://hex.pm/packages/gleam_retry)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/gleam_retry/)
 
-A Gleam library retries code that can fail.
+Retry code that can fail.
 
 ## Usage
 
