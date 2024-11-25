@@ -1,7 +1,7 @@
-//// `retry` provides a flexible mechanism for executing an operation n times
-//// after an initial failure. Various aspects can be configured: the number of
-//// retry attempts, the duration between attempts, the strategy for adjusting
-//// wait times, and the types of errors that should trigger a retry.
+//// `retry` executes a fallible operation multiple times. Various aspects can
+//// be configured: the number of retry attempts, the duration between attempts,
+//// the strategy for adjusting wait times, and the types of errors that should
+//// trigger a retry.
 
 import gleam/bool
 import gleam/erlang/process
