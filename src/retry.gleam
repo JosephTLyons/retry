@@ -50,7 +50,7 @@ pub type NetworkError {
 /// Creates a new configuration with default values.
 /// Default values are:
 /// - `max_attempts`: 3
-/// - `duration`: 500
+/// - `duration`: 500 (ms)
 /// - `next_wait_time`: constant
 /// - `allow`: all errors
 pub fn new() -> Config(a, b) {
