@@ -1,5 +1,5 @@
 name = "gleam_retry"
-version = "0.1.0"
+version = "0.1.1"
 
 description = "Retry code that can fail."
 licences = ["Apache-2.0"]
