@@ -100,7 +100,7 @@ pub fn retry_fails_on_non_allowed_error_test() {
 }
 
 pub fn retry_succeeds_on_allowed_errors_test() {
-  let times = 3
+  let times = 4
   let result_returning_function =
     result_returning_function(times: times, results: [
       // 1, wait 0
