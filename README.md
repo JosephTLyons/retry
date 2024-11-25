@@ -24,8 +24,11 @@ pub type NetworkError {
 
 pub fn main() {
   retry.new()
+  // Optional configuration
   |> retry.max_attempts(max_attempts: 5)
+  // Optional configuration
   |> retry.wait(duration: 100)
+  // Optional configuration
   |> retry.allow(allow: fn(error) {
     case error {
       InvalidStatusCode(code) if code >= 500 && code < 600 -> True
@@ -33,6 +36,7 @@ pub fn main() {
       _ -> False
     }
   })
+  // Optional configuration
   |> retry.backoff(next_wait_time: int.multiply(_, 2))
   |> retry.execute(operation: fn() {
     case int.random(4) {
