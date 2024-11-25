@@ -1,9 +1,9 @@
 import gleam/int
 import gleam/option.{None, Some}
+import gleam/retry.{type RetryData, RetriesExhausted, RetryData, UnallowedError}
 import gleeunit
 import gleeunit/should
 import list_extensions.{at}
-import retry.{type RetryData, RetriesExhausted, RetryData, UnallowedError}
 
 pub fn main() {
   gleeunit.main()
