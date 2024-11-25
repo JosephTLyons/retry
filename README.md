@@ -27,7 +27,7 @@ pub fn main() {
   // Optional configuration
   |> retry.max_attempts(max_attempts: 5)
   // Optional configuration
-  |> retry.wait(duration: 100)
+  |> retry.wait(wait_time: 100)
   // Optional configuration
   |> retry.allow(allow: fn(error) {
     case error {
