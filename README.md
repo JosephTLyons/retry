@@ -3,6 +3,8 @@
 [![Package Version](https://img.shields.io/hexpm/v/retry)](https://hex.pm/packages/retry)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/retry/)
 
+A Gleam library retries code that can fail.
+
 ## Usage
 
 ```sh
@@ -10,29 +12,41 @@ gleam add retry@1
 ```
 
 ```gleam
+import gleam/int
 import retry
 
-pub type NetworkSuccessResponse {
-  SuccessfulConnection
-  ValidData
-}
-
-pub type NetworkErrorResponse {
-  ConnectionTimeout
-  ServerUnavailable
-  InvalidResponse
-}
-
-pub fn flakey_function() -> Result(
-  NetworkSuccessResponse,
-  NetworkSuccessResponse,
-) {
-  // A function that produces unpredictable results
+pub type NetworkError {
+  ServerDown
+  Timeout(Int)
+  InvalidStatusCode(Int)
+  InvalidResponseBody(String)
 }
 
 pub fn main() {
-  use <- retry(times: 3, wait_time_in_ms: 100, allow: AllErrors)
-  flakey_function()
+  retry.new()
+  // Optional configuration
+  |> retry.max_attempts(max_attempts: 5)
+  // Optional configuration
+  |> retry.wait(duration: 100)
+  // Optional configuration
+  |> retry.allow(allow: fn(error) {
+    case error {
+      InvalidStatusCode(code) if code >= 500 && code < 600 -> True
+      Timeout(_) -> True
+      _ -> False
+    }
+  })
+  // Optional configuration
+  |> retry.backoff(next_wait_time: int.multiply(_, 2))
+  |> retry.execute(operation: fn() {
+    case int.random(4) {
+      0 -> Error(ServerDown)
+      1 -> Error(Timeout(5000))
+      2 -> Error(InvalidStatusCode(503))
+      3 -> Error(InvalidResponseBody("Malformed JSON"))
+      _ -> Ok("Success!")
+    }
+  })
 }
 ```
 

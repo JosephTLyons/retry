@@ -1,7 +1,13 @@
+//// `retry` provides a flexible mechanism for executing an operation n times
+//// after an initial failure. Various aspects can be configured: the number of
+//// retry attempts, the duration between attempts, the strategy for adjusting
+//// wait times, and the types of errors that should trigger a retry.
+
 import gleam/bool
 import gleam/erlang/process
+import gleam/function
+import gleam/int
 import gleam/list
-import gleam/set.{type Set}
 
 /// Represents errors that can occur during a retry operation.
 pub type RetryError(a) {
@@ -14,22 +20,6 @@ pub type RetryError(a) {
   UnallowedError(error: a)
 }
 
-/// Represents the error handling strategy for the retry operation.
-pub type Allow(a) {
-  /// Allows retrying for all types of errors.
-  AllErrors
-
-  /// Allows retrying only for the specified list of errors.
-  Errors(errors: List(a))
-}
-
-fn to_set(allow allow: Allow(a)) -> Set(a) {
-  case allow {
-    Errors(errors) -> errors |> set.from_list
-    AllErrors -> set.new()
-  }
-}
-
 type RetryResult(a, b) =
   Result(a, RetryError(b))
 
@@ -38,156 +28,153 @@ pub type RetryData(a, b) {
   RetryData(result: RetryResult(a, b), wait_times: List(Int))
 }
 
-/// Retries an operation multiple times with a wait interval between attempts.
-///
-/// This function will attempt to execute the given operation up to n + 1 times,
-/// where n is the specified number of retries. It will wait between each attempt
-/// after the initial execution. The function will stop retrying if the operation
-/// succeeds or if an unallowed error is encountered.
-///
-/// ## Parameters
-///
-/// - `times`: The number of retry attempts (n). The operation will be executed
-///    n + 1 times in total.
-/// - `wait_time_in_ms`: The time to wait between attempts, in milliseconds.
-/// - `allow`: An `Allow` type specifying which errors are allowed and will
-///    trigger a
-///    retry. If `AllErrors`, a retry will be attempted for any type of error
-///    encountered.
-/// - `operation`: The operation to retry.
-///
-/// ## Returns
+pub opaque type Config(a, b) {
+  Config(
+    max_attempts: Int,
+    duration: Int,
+    next_wait_time: fn(Int) -> Int,
+    allow: fn(b) -> Bool,
+  )
+}
+
+/// Creates a new configuration with default values.
+/// Default values are:
+/// - `max_attempts`: 3
+/// - `duration`: 500 (ms)
+/// - `next_wait_time`: constant
+/// - `allow`: all errors
+pub fn new() -> Config(a, b) {
+  Config(
+    max_attempts: 3,
+    duration: 500,
+    next_wait_time: function.identity,
+    allow: fn(_) { True },
+  )
+}
+
+/// Sets the number of times to attempt the operation.
+pub fn max_attempts(
+  config: Config(a, b),
+  max_attempts max_attempts: Int,
+) -> Config(a, b) {
+  Config(..config, max_attempts: max_attempts)
+}
+
+/// Sets the time to wait (in ms) between retry attempts.
+pub fn wait(config: Config(a, b), duration duration: Int) -> Config(a, b) {
+  Config(..config, duration: duration)
+}
+
+/// Sets the backoff strategy for increasing wait times between retry attempts.
+/// Expects a function that takes the previous wait time and returns a new wait
+/// time.
+pub fn backoff(
+  config: Config(a, b),
+  next_wait_time next_wait_time: fn(Int) -> Int,
+) -> Config(a, b) {
+  Config(..config, next_wait_time: next_wait_time)
+}
+
+/// Sets the logic for determining whether an error should trigger a retry.
+/// Expects a function that takes an error and returns a boolean. Use this
+/// function to match on your error types and return `True` for errors that
+/// should trigger a retry, and `False` for errors that should not.
+pub fn allow(config: Config(a, b), allow allow: fn(b) -> Bool) -> Config(a, b) {
+  Config(..config, allow: allow)
+}
+
+/// Initiates the retry operation with the provided configuration and operation.
 ///
 /// Returns `Ok(a)` if the operation succeeds, or `Error(RetryError(b))` if all
 /// attempts fail. The Error will be either `RetriesExhausted` containing a list
 /// of all encountered errors, or `UnallowedError` containing the first
 /// unallowed error encountered.
-pub fn retry(
-  times times: Int,
-  wait_time_in_ms wait_time_in_ms: Int,
-  allow allow: Allow(b),
+pub fn execute(
+  config: Config(a, b),
   operation operation: fn() -> Result(a, b),
 ) -> RetryResult(a, b) {
-  retry_with_wait(
-    times: times,
-    wait_time_in_ms: wait_time_in_ms,
-    wait: wait,
-    backoff_multiplier: 1,
-    allow: allow,
-    operation: fn(_) { operation() },
-  ).result
-}
-
-/// Retries an operation multiple times with a wait interval between attempts.
-///
-/// This function behaves the same as `retry()`, with the following differences:
-///
-/// ## Parameters
-///
-/// - `backoff_multiplier`: A multiplier applied to the wait time after each
-///    retry attempt. This creates an exponential backoff effect, increasing
-///    the wait time between subsequent retries.
-pub fn retry_with_backoff_multiplier(
-  times times: Int,
-  wait_time_in_ms wait_time_in_ms: Int,
-  backoff_multiplier backoff_multiplier: Int,
-  allow allow: Allow(b),
-  operation operation: fn() -> Result(a, b),
-) -> RetryResult(a, b) {
-  retry_with_wait(
-    times: times,
-    wait_time_in_ms: wait_time_in_ms,
-    wait: wait,
-    backoff_multiplier: backoff_multiplier,
-    allow: allow,
+  execute_with_wait(
+    config: config,
+    wait_function: wait_function,
     operation: fn(_) { operation() },
   ).result
 }
 
 @internal
-pub fn retry_with_wait(
-  times times: Int,
-  wait_time_in_ms wait_time_in_ms: Int,
-  wait wait: fn(Int) -> Nil,
-  backoff_multiplier backoff_multiplier: Int,
-  allow allow: Allow(b),
+pub fn execute_with_wait(
+  config config: Config(a, b),
+  wait_function wait_function: fn(Int) -> Nil,
   operation operation: fn(Int) -> Result(a, b),
 ) -> RetryData(a, b) {
-  do_retry(
-    times: times,
-    remaining: times,
-    wait_time_in_ms: wait_time_in_ms,
-    wait: wait,
-    backoff_multiplier: backoff_multiplier,
-    allowed_errors: allow |> to_set,
+  do_execute(
+    config: config,
+    wait_function: wait_function,
     errors_acc: [],
     wait_time_acc: [],
     operation: operation,
+    attempt_number: 0,
   )
 }
 
-fn do_retry(
-  times times: Int,
-  remaining remaining: Int,
-  wait_time_in_ms wait_time_in_ms: Int,
-  wait wait: fn(Int) -> Nil,
-  backoff_multiplier backoff_multiplier: Int,
-  allowed_errors allowed_errors: Set(b),
+fn do_execute(
+  config config: Config(a, b),
+  wait_function wait_function: fn(Int) -> Nil,
   errors_acc errors_acc: List(b),
   wait_time_acc wait_time_acc: List(Int),
   operation operation: fn(Int) -> Result(a, b),
+  attempt_number attempt_number: Int,
 ) -> RetryData(a, b) {
   use <- bool.guard(
-    remaining < 0,
+    attempt_number >= config.max_attempts,
     RetryData(
       result: Error(RetriesExhausted(errors_acc |> list.reverse)),
       wait_times: wait_time_acc |> list.reverse,
     ),
   )
 
-  let #(wait_time_acc, wait_time_in_ms) = case remaining < times {
-    True -> {
-      wait(wait_time_in_ms)
-      #(
-        [wait_time_in_ms, ..wait_time_acc],
-        wait_time_in_ms * backoff_multiplier,
-      )
+  // Clean this logic up - feels #yucky
+  let duration = case attempt_number == 0 {
+    True -> 0
+    False -> {
+      case wait_time_acc |> list.first {
+        Ok(0) | Error(_) -> config.duration
+        Ok(duration) -> duration |> config.next_wait_time
+      }
+      |> int.max(0)
     }
-    False -> #(wait_time_acc, wait_time_in_ms)
   }
 
-  case operation(times - remaining) {
+  wait_function(duration)
+
+  let wait_time_acc = [duration, ..wait_time_acc]
+
+  case operation(attempt_number) {
     Ok(result) ->
       RetryData(result: Ok(result), wait_times: wait_time_acc |> list.reverse)
     Error(error) -> {
-      let allow_error =
-        set.is_empty(allowed_errors) || set.contains(allowed_errors, error)
       use <- bool.guard(
-        !allow_error,
+        !config.allow(error),
         RetryData(
           result: Error(UnallowedError(error)),
           wait_times: wait_time_acc |> list.reverse,
         ),
       )
 
-      do_retry(
-        times: times,
-        remaining: remaining - 1,
-        wait_time_in_ms: wait_time_in_ms,
-        wait: wait,
-        backoff_multiplier: backoff_multiplier,
-        allowed_errors: allowed_errors,
+      do_execute(
+        config: config,
+        wait_function: wait_function,
         errors_acc: [error, ..errors_acc],
         wait_time_acc: wait_time_acc,
         operation: operation,
+        attempt_number: attempt_number + 1,
       )
     }
   }
 }
 
-fn wait(wait_time_in_ms: Int) -> Nil {
+fn wait_function(duration duration: Int) -> Nil {
   let subject = process.new_subject()
-  let _ = subject |> process.send_after(wait_time_in_ms, Nil)
-  let _ = subject |> process.receive(within: wait_time_in_ms * 2)
+  let _ = subject |> process.send_after(duration, Nil)
+  let _ = subject |> process.receive(within: duration * 2)
   Nil
 }

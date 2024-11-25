@@ -3,10 +3,7 @@ import gleam/option.{None, Some}
 import gleeunit
 import gleeunit/should
 import list_extensions.{at}
-import retry.{
-  type RetryData, AllErrors, Errors, RetriesExhausted, RetryData, UnallowedError,
-  retry_with_wait,
-}
+import retry.{type RetryData, RetriesExhausted, RetryData, UnallowedError}
 
 pub fn main() {
   gleeunit.main()
@@ -23,9 +20,7 @@ type MockNetworkErrorResponse {
   InvalidResponse
 }
 
-const wait_time_in_ms = 100
-
-pub fn retry_with_negative_times_returns_retries_exhausted_error_test() {
+pub fn negative_retry_attempts_returns_retries_exhausted_error_test() {
   let times = -1
   let result_returning_function =
     result_returning_function(times: times, results: [
@@ -34,45 +29,44 @@ pub fn retry_with_negative_times_returns_retries_exhausted_error_test() {
       Error(InvalidResponse),
     ])
 
-  retry_with_wait(
-    times: times,
-    wait_time_in_ms: wait_time_in_ms,
-    wait: fake_wait,
-    backoff_multiplier: 1,
-    allow: AllErrors,
-    operation: result_returning_function,
+  retry.new()
+  |> retry.max_attempts(times)
+  |> retry.wait(100)
+  |> retry.execute_with_wait(
+    result_returning_function,
+    wait_function: fake_wait,
   )
   |> should.equal(
     RetryData(result: Error(RetriesExhausted([])), wait_times: []),
   )
 }
 
-pub fn retry_fails_after_exhausting_attempts_test() {
-  let times = 2
+pub fn retry_exhausts_all_attempts_and_fails_test() {
+  let times = 3
   let result_returning_function =
     result_returning_function(times: times, results: [
+      // 1, wait 0
       Error(ConnectionTimeout),
-      // 0, wait
+      // 2, wait 100
       Error(ServerUnavailable),
-      // 1, wait
+      // 3, wait 100
+      // error
       Error(InvalidResponse),
-      // 2, error
     ])
 
-  retry_with_wait(
-    times: times,
-    wait_time_in_ms: wait_time_in_ms,
-    wait: fake_wait,
-    backoff_multiplier: 1,
-    allow: AllErrors,
-    operation: result_returning_function,
+  retry.new()
+  |> retry.max_attempts(times)
+  |> retry.wait(100)
+  |> retry.execute_with_wait(
+    result_returning_function,
+    wait_function: fake_wait,
   )
   |> should.equal(
     RetryData(
       result: Error(
         RetriesExhausted([ConnectionTimeout, ServerUnavailable, InvalidResponse]),
       ),
-      wait_times: [100, 100],
+      wait_times: [0, 100, 100],
     ),
   )
 }
@@ -81,131 +75,250 @@ pub fn retry_fails_on_non_allowed_error_test() {
   let times = 3
   let result_returning_function =
     result_returning_function(times: times, results: [
+      // 1, wait 0
       Error(ConnectionTimeout),
-      // 0, wait
+      // 2, wait 100
+      // error
       Error(ServerUnavailable),
-      // 1, error
+      // Doesn't reach
       Error(InvalidResponse),
       Ok(SuccessfulConnection),
     ])
 
-  retry_with_wait(
-    times: times,
-    wait_time_in_ms: wait_time_in_ms,
-    wait: fake_wait,
-    backoff_multiplier: 1,
-    allow: Errors([ConnectionTimeout, InvalidResponse]),
-    operation: result_returning_function,
+  retry.new()
+  |> retry.max_attempts(times)
+  |> retry.wait(100)
+  |> retry.allow(fn(error) {
+    case error {
+      ConnectionTimeout | InvalidResponse -> True
+      _ -> False
+    }
+  })
+  |> retry.execute_with_wait(
+    result_returning_function,
+    wait_function: fake_wait,
   )
   |> should.equal(
     RetryData(result: Error(UnallowedError(ServerUnavailable)), wait_times: [
-      100,
+      0, 100,
     ]),
   )
 }
 
-pub fn retry_succeeds_on_allow_test() {
+pub fn retry_succeeds_on_allowed_errors_test() {
   let times = 3
   let result_returning_function =
     result_returning_function(times: times, results: [
+      // 1, wait 0
       Error(ConnectionTimeout),
-      // 0, wait
+      // 2, wait 100
       Error(ServerUnavailable),
-      // 1, wait
-      Error(InvalidResponse),
-      // 2, wait
+      // 3, wait 100
+      // succeed
       Ok(SuccessfulConnection),
-      // 3, succeed
+      // Doesn't reach
+      Error(InvalidResponse),
     ])
 
-  retry_with_wait(
-    times: times,
-    wait_time_in_ms: wait_time_in_ms,
-    wait: fake_wait,
-    backoff_multiplier: 1,
-    allow: Errors([ConnectionTimeout, ServerUnavailable, InvalidResponse]),
-    operation: result_returning_function,
+  retry.new()
+  |> retry.max_attempts(times)
+  |> retry.wait(100)
+  |> retry.allow(fn(error) {
+    case error {
+      ConnectionTimeout | ServerUnavailable -> True
+      _ -> False
+    }
+  })
+  |> retry.execute_with_wait(
+    result_returning_function,
+    wait_function: fake_wait,
   )
   |> should.equal(
-    RetryData(result: Ok(SuccessfulConnection), wait_times: [100, 100, 100]),
+    RetryData(result: Ok(SuccessfulConnection), wait_times: [0, 100, 100]),
   )
 }
 
-pub fn retry_succeeds_with_all_errors_test() {
-  let times = 3
+pub fn retry_succeeds_when_all_errors_are_allowed_test() {
+  let times = 4
   let result_returning_function =
     result_returning_function(times: times, results: [
+      // 1, wait 0
       Error(ConnectionTimeout),
-      // 0, wait
+      // 2, wait 100
       Error(ServerUnavailable),
-      // 1, wait
+      // 3, wait 100
       Error(InvalidResponse),
-      // 2, wait
+      // 4, wait 100
+      // succeed
       Ok(ValidData),
-      // 3, succeed
     ])
 
-  retry_with_wait(
-    times: times,
-    wait_time_in_ms: wait_time_in_ms,
-    wait: fake_wait,
-    backoff_multiplier: 1,
-    allow: AllErrors,
-    operation: result_returning_function,
+  retry.new()
+  |> retry.max_attempts(times)
+  |> retry.wait(100)
+  |> retry.execute_with_wait(
+    result_returning_function,
+    wait_function: fake_wait,
   )
-  |> should.equal(RetryData(result: Ok(ValidData), wait_times: [100, 100, 100]))
+  |> should.equal(
+    RetryData(result: Ok(ValidData), wait_times: [0, 100, 100, 100]),
+  )
 }
 
-// ------------ Multiplier tests ------------
+// ------------ Backoff tests ------------
 
-pub fn retry_with_multiplier_test() {
-  let times = 3
+pub fn retry_with_exponential_backoff_test() {
+  let times = 4
   let result_returning_function =
     result_returning_function(times: times, results: [
+      // 1, wait 0
       Error(ConnectionTimeout),
-      // 0, wait
+      // 2, wait 100
       Error(ServerUnavailable),
-      // 1, wait
+      // 3, wait 200
       Error(InvalidResponse),
-      // 2, wait
+      // 4, wait 400
+      // succeed
       Ok(ValidData),
-      // 3, succeed
     ])
 
-  retry_with_wait(
-    times: times,
-    wait_time_in_ms: wait_time_in_ms,
-    wait: fake_wait,
-    backoff_multiplier: 2,
-    allow: AllErrors,
-    operation: result_returning_function,
+  retry.new()
+  |> retry.max_attempts(times)
+  |> retry.wait(100)
+  |> retry.backoff(int.multiply(_, 2))
+  |> retry.allow(fn(_) { True })
+  |> retry.execute_with_wait(
+    result_returning_function,
+    wait_function: fake_wait,
   )
-  |> should.equal(RetryData(result: Ok(ValidData), wait_times: [100, 200, 400]))
+  |> should.equal(
+    RetryData(result: Ok(ValidData), wait_times: [0, 100, 200, 400]),
+  )
+}
+
+pub fn retry_with_linear_backoff_test() {
+  let times = 4
+  let result_returning_function =
+    result_returning_function(times: times, results: [
+      // 1, wait 0
+      Error(ConnectionTimeout),
+      // 2, wait 100
+      Error(ServerUnavailable),
+      // 3, wait 200
+      Error(InvalidResponse),
+      // 4, wait 300
+      // succeed
+      Ok(ValidData),
+    ])
+
+  retry.new()
+  |> retry.max_attempts(times)
+  |> retry.wait(100)
+  |> retry.backoff(int.add(_, 100))
+  |> retry.allow(fn(_) { True })
+  |> retry.execute_with_wait(
+    result_returning_function,
+    wait_function: fake_wait,
+  )
+  |> should.equal(
+    RetryData(result: Ok(ValidData), wait_times: [0, 100, 200, 300]),
+  )
+}
+
+pub fn retry_with_custom_backoff_test() {
+  let times = 4
+  let result_returning_function =
+    result_returning_function(times: times, results: [
+      // 1, wait 0
+      Error(ConnectionTimeout),
+      // 2, wait 100
+      Error(ServerUnavailable),
+      // 3, wait 400
+      Error(InvalidResponse),
+      // 4, wait 1000
+      // succeed
+      Ok(ValidData),
+    ])
+
+  retry.new()
+  |> retry.max_attempts(times)
+  |> retry.wait(100)
+  |> retry.backoff(fn(wait) { wait |> int.add(100) |> int.multiply(2) })
+  |> retry.allow(fn(_) { True })
+  |> retry.execute_with_wait(
+    result_returning_function,
+    wait_function: fake_wait,
+  )
+  |> should.equal(
+    RetryData(result: Ok(ValidData), wait_times: [0, 100, 400, 1000]),
+  )
 }
 
 pub fn retry_with_multiplier_succeeds_after_allowed_errors_test() {
-  let times = 3
+  let times = 4
   let result_returning_function =
     result_returning_function(times: times, results: [
+      // 1, wait 0
       Error(ConnectionTimeout),
-      // 0, wait
+      // 2, wait 100
       Error(ServerUnavailable),
-      // 1, wait
+      // 3, wait 300
+      // succeed
       Ok(SuccessfulConnection),
-      // 2, succeed
+      // Doesn't reach
       Error(InvalidResponse),
     ])
 
-  retry_with_wait(
-    times: times,
-    wait_time_in_ms: wait_time_in_ms,
-    wait: fake_wait,
-    backoff_multiplier: 3,
-    allow: Errors([ConnectionTimeout, ServerUnavailable]),
-    operation: result_returning_function,
+  retry.new()
+  |> retry.max_attempts(times)
+  |> retry.wait(100)
+  |> retry.backoff(int.multiply(_, 3))
+  |> retry.allow(fn(error) {
+    case error {
+      ConnectionTimeout | ServerUnavailable -> True
+      _ -> False
+    }
+  })
+  |> retry.execute_with_wait(
+    result_returning_function,
+    wait_function: fake_wait,
   )
   |> should.equal(
-    RetryData(result: Ok(SuccessfulConnection), wait_times: [100, 300]),
+    RetryData(result: Ok(SuccessfulConnection), wait_times: [0, 100, 300]),
+  )
+}
+
+pub fn retry_with_negative_wait_time_configuration_test() {
+  let times = 4
+  let result_returning_function =
+    result_returning_function(times: times, results: [
+      // 1, wait 0
+      Error(ConnectionTimeout),
+      // 2, wait 0
+      Error(ServerUnavailable),
+      // 3, wait 0
+      // succeed
+      Ok(SuccessfulConnection),
+      // Doesn't reach
+      Error(InvalidResponse),
+    ])
+
+  retry.new()
+  |> retry.max_attempts(times)
+  |> retry.wait(-100)
+  |> retry.backoff(int.subtract(_, 1000))
+  |> retry.allow(fn(error) {
+    case error {
+      ConnectionTimeout | ServerUnavailable -> True
+      _ -> False
+    }
+  })
+  |> retry.execute_with_wait(
+    result_returning_function,
+    wait_function: fake_wait,
+  )
+  |> should.equal(
+    RetryData(result: Ok(SuccessfulConnection), wait_times: [0, 0, 0]),
   )
 }
 
