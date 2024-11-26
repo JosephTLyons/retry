@@ -28,13 +28,13 @@ pub type NetworkError {
 }
 
 pub fn network_request() -> Result(String, NetworkError) {
-  Error(Timeout(100))
+  Error(Timeout(int.random(5)))
 }
 
 pub fn main() {
-  persevero.new(wait_time: 1000, backoff: int.multiply(_, 2))
+  persevero.new(wait_time: 500, backoff: int.multiply(_, 2))
   |> persevero.max_attempts(5)
-  |> persevero.max_wait_time(10_000)
+  |> persevero.max_wait_time(5000)
   |> persevero.execute(operation: network_request, allow: fn(error) {
     case error {
       InvalidStatusCode(code) if code >= 500 && code < 600 -> True
@@ -42,7 +42,7 @@ pub fn main() {
       _ -> False
     }
   })
-  |> io.debug // Error(RetriesExhausted([Timeout(100), Timeout(100), Timeout(100), Timeout(100), Timeout(100)]))
+  |> io.debug // Error(RetriesExhausted([Timeout(1), Timeout(4), Timeout(3), Timeout(1), Timeout(0)]))
 }
 ```
 
