@@ -5,7 +5,9 @@
 
 Retry code that can fail.
 
-⚠️ This library is pre-v1.0 and the API may change.
+```
+⚠️ As we're still iterating and refining this pre-v1.0 library, the API may evolve to accommodate missing features and improvements.
+```
 
 ## Usage
 
