@@ -5,6 +5,8 @@
 
 Retry code that can fail.
 
+⚠️ This library is pre-v1.0 and the API may change.
+
 ## Usage
 
 ```sh
@@ -22,10 +24,14 @@ pub type NetworkError {
   InvalidResponseBody(String)
 }
 
+pub fn network_request() -> Result(String, NetworkError) {
+  // ...
+}
+
 pub fn main() {
-  new(max_attempts: 5, wait_time: 1000, backoff: int.multiply(_, 2))
+  persevero.new(max_attempts: 5, wait_time: 1000, backoff: int.multiply(_, 2))
   // Optional configuration
-  |> allow(allow: fn(error) {
+  |> persevero.allow(allow: fn(error) {
     case error {
       InvalidStatusCode(code) if code >= 500 && code < 600 -> True
       Timeout(_) -> True
@@ -33,16 +39,8 @@ pub fn main() {
     }
   })
   // Optional configuration
-  |> max_wait_time(10_000)
-  |> execute(operation: fn() {
-    case int.random(4) {
-      0 -> Error(ServerDown)
-      1 -> Error(Timeout(5000))
-      2 -> Error(InvalidStatusCode(503))
-      3 -> Error(InvalidResponseBody("Malformed JSON"))
-      _ -> Ok("Success!")
-    }
-  })
+  |> persevero.max_wait_time(10_000)
+  |> persevero.execute(operation: network_request)
 }
 ```
 
