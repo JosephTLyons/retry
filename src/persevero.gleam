@@ -27,93 +27,88 @@ pub type RetryData(a, b) {
   RetryData(result: RetryResult(a, b), wait_times: List(Int))
 }
 
-pub opaque type Config(a, b) {
-  Config(yielder: Yielder(Int), max_attempts: Int, allow: fn(b) -> Bool)
-}
-
-/// Creates a new configuration with the specified `max_attempts`, `wait_time`,
-/// and `backoff` function.
+/// Creates a new retry configuration with the specified `wait_time` and
+/// `backoff` function.
 ///
-/// The `backoff` function determines how the wait time changes
-/// between retry attempts. It takes the previous wait time as input and
-/// returns the next wait time.
-///
-/// Configuration defaults:
-/// - `allow`: all errors
+/// The `backoff` function determines how the wait time changes between retry
+/// attempts. It takes the previous wait time as input and returns the next wait
+/// time.
 pub fn new(
-  max_attempts max_attempts: Int,
   wait_time wait_time: Int,
   backoff backoff: fn(Int) -> Int,
-) -> Config(a, b) {
-  let yielder =
-    yielder.unfold(wait_time, fn(acc) { yielder.Next(acc, backoff(acc)) })
-  Config(yielder: yielder, max_attempts: max_attempts, allow: fn(_) { True })
+) -> Yielder(Int) {
+  yielder.unfold(0, fn(acc) {
+    case acc {
+      0 -> yielder.Next(0, wait_time)
+      _ -> yielder.Next(acc, backoff(acc))
+    }
+  })
 }
 
-/// Sets the logic for determining whether an error should trigger a retry.
-/// Expects a function that takes an error and returns a boolean. Use this
-/// function to match on your error types and return `True` for errors that
-/// should trigger a retry, and `False` for errors that should not.
-pub fn allow(
-  config config: Config(a, b),
-  allow allow: fn(b) -> Bool,
-) -> Config(a, b) {
-  Config(..config, allow: allow)
+/// Sets a maximum number of retry attempts.
+pub fn max_attempts(
+  yielder yielder: Yielder(Int),
+  max_attempts max_attempts: Int,
+) -> Yielder(Int) {
+  yielder |> yielder.take(max_attempts)
 }
 
 /// Sets a maximum time limit to wait between retries.
 pub fn max_wait_time(
-  config config: Config(a, b),
+  yielder yielder: Yielder(Int),
   max_wait_time max_wait_time: Int,
-) -> Config(a, b) {
-  let yielder = config.yielder |> yielder.map(int.min(_, max_wait_time))
-  Config(..config, yielder: yielder)
+) -> Yielder(Int) {
+  yielder |> yielder.map(int.min(_, max_wait_time))
 }
 
-/// Initiates the retry operation with the provided configuration and operation.
+/// Initiates the retry operation with the operation.
+///
+/// `allow` sets the logic for determining whether an error should trigger a
+/// retry. Expects a function that takes an error and returns a boolean. Use
+/// this function to match on your error types and return `True` for errors that
+/// should trigger a retry, and `False` for errors that should not.
 ///
 /// Returns `Ok(a)` if the operation succeeds, or `Error(RetryError(b))`.
 pub fn execute(
-  config config: Config(a, b),
+  yielder yielder: Yielder(Int),
   operation operation: fn() -> Result(a, b),
+  allow allow: fn(b) -> Bool,
 ) -> RetryResult(a, b) {
   execute_with_wait(
-    config: config,
-    wait_function: wait_function,
+    yielder: yielder,
     operation: fn(_) { operation() },
+    allow: allow,
+    wait_function: wait_function,
   ).result
 }
 
 @internal
 pub fn execute_with_wait(
-  config config: Config(a, b),
-  wait_function wait_function: fn(Int) -> Nil,
+  yielder yielder: Yielder(Int),
   operation operation: fn(Int) -> Result(a, b),
+  allow allow: fn(b) -> Bool,
+  wait_function wait_function: fn(Int) -> Nil,
 ) -> RetryData(a, b) {
-  let yielder =
-    yielder.from_list([0])
-    |> yielder.append(config.yielder)
-    |> yielder.take(config.max_attempts)
-    |> yielder.map(int.max(_, 0))
+  let yielder = yielder |> yielder.map(int.max(_, 0))
 
   do_execute(
-    config: config,
     yielder: yielder,
-    wait_function: wait_function,
-    errors_acc: [],
-    wait_time_acc: [],
     operation: operation,
+    allow: allow,
+    wait_function: wait_function,
+    wait_time_acc: [],
+    errors_acc: [],
     attempt_number: 0,
   )
 }
 
 fn do_execute(
-  config config: Config(a, b),
   yielder yielder: Yielder(Int),
-  wait_function wait_function: fn(Int) -> Nil,
-  errors_acc errors_acc: List(b),
-  wait_time_acc wait_time_acc: List(Int),
   operation operation: fn(Int) -> Result(a, b),
+  allow allow: fn(b) -> Bool,
+  wait_function wait_function: fn(Int) -> Nil,
+  wait_time_acc wait_time_acc: List(Int),
+  errors_acc errors_acc: List(b),
   attempt_number attempt_number: Int,
 ) -> RetryData(a, b) {
   case yielder |> yielder.step() {
@@ -130,7 +125,7 @@ fn do_execute(
           )
         Error(error) -> {
           use <- bool.guard(
-            !config.allow(error),
+            !allow(error),
             RetryData(
               result: Error(UnallowedError(error)),
               wait_times: wait_time_acc |> list.reverse,
@@ -138,12 +133,12 @@ fn do_execute(
           )
 
           do_execute(
-            config: config,
             yielder: yielder,
-            wait_function: wait_function,
-            errors_acc: [error, ..errors_acc],
-            wait_time_acc: wait_time_acc,
             operation: operation,
+            allow: allow,
+            wait_function: wait_function,
+            wait_time_acc: wait_time_acc,
+            errors_acc: [error, ..errors_acc],
             attempt_number: attempt_number + 1,
           )
         }

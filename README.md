@@ -17,6 +17,7 @@ gleam add persevero@1
 
 ```gleam
 import gleam/int
+import gleam/io
 import persevero
 
 pub type NetworkError {
@@ -27,22 +28,21 @@ pub type NetworkError {
 }
 
 pub fn network_request() -> Result(String, NetworkError) {
-  // ...
+  Error(Timeout(100))
 }
 
 pub fn main() {
-  persevero.new(max_attempts: 5, wait_time: 1000, backoff: int.multiply(_, 2))
-  // Optional configuration
-  |> persevero.allow(allow: fn(error) {
+  persevero.new(wait_time: 1000, backoff: int.multiply(_, 2))
+  |> persevero.max_attempts(5)
+  |> persevero.max_wait_time(10_000)
+  |> persevero.execute(operation: network_request, allow: fn(error) {
     case error {
       InvalidStatusCode(code) if code >= 500 && code < 600 -> True
       Timeout(_) -> True
       _ -> False
     }
   })
-  // Optional configuration
-  |> persevero.max_wait_time(10_000)
-  |> persevero.execute(operation: network_request)
+  |> io.debug // Error(RetriesExhausted([Timeout(100), Timeout(100), Timeout(100), Timeout(100), Timeout(100)]))
 }
 ```
 

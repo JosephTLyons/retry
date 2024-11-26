@@ -30,10 +30,12 @@ pub fn negative_retry_attempts_returns_retries_exhausted_error_test() {
       Error(InvalidResponse),
     ])
 
-  persevero.new(times, 100, function.identity)
+  persevero.new(100, function.identity)
+  |> persevero.max_attempts(times)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     operation: result_returning_function,
+    allow: fn(_) { True },
   )
   |> should.equal(
     RetryData(result: Error(RetriesExhausted([])), wait_times: []),
@@ -53,10 +55,12 @@ pub fn retry_exhausts_all_attempts_and_fails_test() {
       Error(InvalidResponse),
     ])
 
-  persevero.new(times, 100, function.identity)
+  persevero.new(100, function.identity)
+  |> persevero.max_attempts(times)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     operation: result_returning_function,
+    allow: fn(_) { True },
   )
   |> should.equal(
     RetryData(
@@ -82,16 +86,17 @@ pub fn retry_fails_on_non_allowed_error_test() {
       Ok(SuccessfulConnection),
     ])
 
-  persevero.new(times, 100, function.identity)
-  |> persevero.allow(fn(error) {
-    case error {
-      ConnectionTimeout | InvalidResponse -> True
-      _ -> False
-    }
-  })
+  persevero.new(100, function.identity)
+  |> persevero.max_attempts(times)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     operation: result_returning_function,
+    allow: fn(error) {
+      case error {
+        ConnectionTimeout | InvalidResponse -> True
+        _ -> False
+      }
+    },
   )
   |> should.equal(
     RetryData(result: Error(UnallowedError(ServerUnavailable)), wait_times: [
@@ -115,16 +120,17 @@ pub fn retry_succeeds_on_allowed_errors_test() {
       Error(InvalidResponse),
     ])
 
-  persevero.new(times, 100, function.identity)
-  |> persevero.allow(fn(error) {
-    case error {
-      ConnectionTimeout | ServerUnavailable -> True
-      _ -> False
-    }
-  })
+  persevero.new(100, function.identity)
+  |> persevero.max_attempts(times)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     operation: result_returning_function,
+    allow: fn(error) {
+      case error {
+        ConnectionTimeout | ServerUnavailable -> True
+        _ -> False
+      }
+    },
   )
   |> should.equal(
     RetryData(result: Ok(SuccessfulConnection), wait_times: [0, 100, 100]),
@@ -146,10 +152,12 @@ pub fn retry_succeeds_when_all_errors_are_allowed_test() {
       Ok(ValidData),
     ])
 
-  persevero.new(times, 100, function.identity)
+  persevero.new(100, function.identity)
+  |> persevero.max_attempts(times)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     operation: result_returning_function,
+    allow: fn(_) { True },
   )
   |> should.equal(
     RetryData(result: Ok(ValidData), wait_times: [0, 100, 100, 100]),
@@ -171,10 +179,12 @@ pub fn retry_with_exponential_backoff_test() {
       Ok(ValidData),
     ])
 
-  persevero.new(times, 100, int.multiply(_, 2))
+  persevero.new(100, int.multiply(_, 2))
+  |> persevero.max_attempts(times)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     operation: result_returning_function,
+    allow: fn(_) { True },
   )
   |> should.equal(
     RetryData(result: Ok(ValidData), wait_times: [0, 100, 200, 400]),
@@ -196,10 +206,12 @@ pub fn retry_with_linear_backoff_test() {
       Ok(ValidData),
     ])
 
-  persevero.new(times, 100, int.add(_, 100))
+  persevero.new(100, int.add(_, 100))
+  |> persevero.max_attempts(times)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     operation: result_returning_function,
+    allow: fn(_) { True },
   )
   |> should.equal(
     RetryData(result: Ok(ValidData), wait_times: [0, 100, 200, 300]),
@@ -221,10 +233,12 @@ pub fn retry_with_custom_backoff_test() {
       Ok(ValidData),
     ])
 
-  persevero.new(times, 100, fn(wait) { wait |> int.add(100) |> int.multiply(2) })
+  persevero.new(100, fn(wait) { wait |> int.add(100) |> int.multiply(2) })
+  |> persevero.max_attempts(times)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     operation: result_returning_function,
+    allow: fn(_) { True },
   )
   |> should.equal(
     RetryData(result: Ok(ValidData), wait_times: [0, 100, 400, 1000]),
@@ -246,16 +260,17 @@ pub fn retry_with_backoff_succeeds_after_allowed_errors_test() {
       Error(InvalidResponse),
     ])
 
-  persevero.new(times, 100, int.multiply(_, 3))
-  |> persevero.allow(fn(error) {
-    case error {
-      ConnectionTimeout | ServerUnavailable -> True
-      _ -> False
-    }
-  })
+  persevero.new(100, int.multiply(_, 3))
+  |> persevero.max_attempts(times)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     operation: result_returning_function,
+    allow: fn(error) {
+      case error {
+        ConnectionTimeout | ServerUnavailable -> True
+        _ -> False
+      }
+    },
   )
   |> should.equal(
     RetryData(result: Ok(SuccessfulConnection), wait_times: [0, 100, 300]),
@@ -277,10 +292,12 @@ pub fn retry_with_negative_wait_time_configuration_test() {
       Error(InvalidResponse),
     ])
 
-  persevero.new(times, -100, int.subtract(_, 1000))
+  persevero.new(-100, int.subtract(_, 1000))
+  |> persevero.max_attempts(times)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     operation: result_returning_function,
+    allow: fn(_) { True },
   )
   |> should.equal(
     RetryData(result: Ok(SuccessfulConnection), wait_times: [0, 0, 0]),
@@ -306,17 +323,18 @@ pub fn retry_with_max_wait_time_configuration_test() {
       Error(InvalidResponse),
     ])
 
-  persevero.new(times, 500, int.multiply(_, 2))
-  |> persevero.allow(fn(error) {
-    case error {
-      ConnectionTimeout | ServerUnavailable -> True
-      _ -> False
-    }
-  })
+  persevero.new(500, int.multiply(_, 2))
+  |> persevero.max_attempts(times)
   |> persevero.max_wait_time(1000)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     operation: result_returning_function,
+    allow: fn(error) {
+      case error {
+        ConnectionTimeout | ServerUnavailable -> True
+        _ -> False
+      }
+    },
   )
   |> should.equal(
     RetryData(result: Ok(SuccessfulConnection), wait_times: [
