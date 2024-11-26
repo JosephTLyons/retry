@@ -66,7 +66,8 @@ pub fn max_wait_time(
 /// `allow` sets the logic for determining whether an error should trigger a
 /// retry. Expects a function that takes an error and returns a boolean. Use
 /// this function to match on your error types and return `True` for errors that
-/// should trigger a retry, and `False` for errors that should not.
+/// should trigger a retry, and `False` for errors that should not. To allow all
+/// errors, simply use `fn(_) { True }`.
 ///
 /// Returns `Ok(a)` if the operation succeeds, or `Error(RetryError(b))`.
 pub fn execute(
