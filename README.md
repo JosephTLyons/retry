@@ -23,9 +23,9 @@ pub type NetworkError {
 }
 
 pub fn main() {
-  persevero.new(max_attempts: 5, wait_time: 1000)
+  new(max_attempts: 5, wait_time: 1000, backoff: int.multiply(_, 2))
   // Optional configuration
-  |> persevero.allow(allow: fn(error) {
+  |> allow(allow: fn(error) {
     case error {
       InvalidStatusCode(code) if code >= 500 && code < 600 -> True
       Timeout(_) -> True
@@ -33,10 +33,8 @@ pub fn main() {
     }
   })
   // Optional configuration
-  |> persevero.backoff(next_wait_time: int.multiply(_, 2))
-  // Optional configuration
-  |> persevero.max_wait_time(10000)
-  |> persevero.execute(operation: fn() {
+  |> max_wait_time(10_000)
+  |> execute(operation: fn() {
     case int.random(4) {
       0 -> Error(ServerDown)
       1 -> Error(Timeout(5000))
