@@ -78,7 +78,7 @@ pub fn execute(
     yielder: yielder,
     operation: fn(_) { operation() },
     allow: allow,
-    wait_function: wait_function,
+    wait_function: process.sleep,
   ).result
 }
 
@@ -150,11 +150,4 @@ fn do_execute(
         wait_times: wait_time_acc |> list.reverse,
       )
   }
-}
-
-fn wait_function(wait_time wait_time: Int) -> Nil {
-  let subject = process.new_subject()
-  let _ = subject |> process.send_after(wait_time, Nil)
-  let _ = subject |> process.receive(within: wait_time * 2)
-  Nil
 }
