@@ -5,54 +5,55 @@ import gleam/int
 import gleam/list
 import gleam/yielder.{type Yielder}
 
-/// Represents errors that can occur during a retry attempts.
-pub type RetryError(a) {
-  /// Indicates that all retry attempts have been exhausted. Contains an ordered
-  /// list of all errors encountered during the execution attempts.
+/// Represents errors that can occur during execution attempts.
+pub type Error(a) {
+  /// Indicates that all execution attempts have been exhausted. Contains an
+  /// ordered list of all errors encountered during the execution attempts.
   RetriesExhausted(errors: List(a))
 
-  /// Indicates that `retry` ran into an error that wasn't allowed. Contains the
-  /// specific error that caused the retry to stop. By default, all errors are
-  /// allowed. Use the `allow()` function to specify which errors should trigger
-  /// a retry.
+  /// Indicates that an error that wasn't allowed was encountered. Contains the
+  /// specific error that caused execution to stop.
   UnallowedError(error: a)
 }
 
 type RetryResult(a, b) =
-  Result(a, RetryError(b))
+  Result(a, Error(b))
 
 @internal
 pub type RetryData(a, b) {
   RetryData(result: RetryResult(a, b), wait_times: List(Int))
 }
 
-/// Creates a new retry configuration with the specified `wait_time` and
-/// `backoff` function.
+/// Creates a new configuration with the specified `wait_time` and `backoff`
+/// function.
 ///
-/// The `backoff` function determines how the wait time changes between retry
+/// The `backoff` function determines how the wait time changes between
 /// attempts. It takes the previous wait time as input and returns the next wait
 /// time.
 pub fn new(
   wait_time wait_time: Int,
   backoff backoff: fn(Int) -> Int,
 ) -> Yielder(Int) {
-  yielder.unfold(0, fn(acc) {
-    case acc {
-      0 -> yielder.Next(0, wait_time)
-      _ -> yielder.Next(acc, backoff(acc))
-    }
-  })
+  yielder.unfold(wait_time, fn(acc) { yielder.Next(acc, backoff(acc)) })
 }
 
-/// Sets a maximum number of retry attempts.
-pub fn max_attempts(
+/// Adds a random integer between [1, `upper_bound`] to each wait time.
+pub fn apply_jitter(
   yielder yielder: Yielder(Int),
-  max_attempts max_attempts: Int,
+  upper_bound upper_bound: Int,
 ) -> Yielder(Int) {
-  yielder |> yielder.take(max_attempts)
+  apply_constant(yielder: yielder, adjustment: int.random(upper_bound) + 1)
 }
 
-/// Sets a maximum time limit to wait between retries.
+/// Adds a constant integer to each wait time.
+pub fn apply_constant(
+  yielder yielder: Yielder(Int),
+  adjustment adjustment: Int,
+) -> Yielder(Int) {
+  yielder |> yielder.map(int.add(_, adjustment))
+}
+
+/// Sets a maximum time limit to wait between execution attempts.
 pub fn max_wait_time(
   yielder yielder: Yielder(Int),
   max_wait_time max_wait_time: Int,
@@ -60,24 +61,24 @@ pub fn max_wait_time(
   yielder |> yielder.map(int.min(_, max_wait_time))
 }
 
-/// Initiates the retry operation with the operation.
+/// Initiates the execution process with the specified operation.
 ///
-/// `allow` sets the logic for determining whether an error should trigger a
-/// retry. Expects a function that takes an error and returns a boolean. Use
-/// this function to match on your error types and return `True` for errors that
-/// should trigger a retry, and `False` for errors that should not. To allow all
-/// errors, simply use `fn(_) { True }`.
-///
-/// Returns `Ok(a)` if the operation succeeds, or `Error(RetryError(b))`.
+/// `allow` sets the logic for determining whether an error should trigger
+/// another attempt. Expects a function that takes an error and returns a
+/// boolean. Use this function to match on the encountered error and return
+/// `True` for errors that should trigger another attempt, and `False` for
+/// errors that should not. To allow all errors, use `fn(_) { True }`.
 pub fn execute(
   yielder yielder: Yielder(Int),
-  operation operation: fn() -> Result(a, b),
   allow allow: fn(b) -> Bool,
+  max_attempts max_attempts: Int,
+  operation operation: fn() -> Result(a, b),
 ) -> RetryResult(a, b) {
   execute_with_wait(
     yielder: yielder,
-    operation: fn(_) { operation() },
     allow: allow,
+    max_attempts: max_attempts,
+    operation: fn(_) { operation() },
     wait_function: process.sleep,
   ).result
 }
@@ -85,27 +86,39 @@ pub fn execute(
 @internal
 pub fn execute_with_wait(
   yielder yielder: Yielder(Int),
-  operation operation: fn(Int) -> Result(a, b),
   allow allow: fn(b) -> Bool,
+  max_attempts max_attempts: Int,
+  operation operation: fn(Int) -> Result(a, b),
   wait_function wait_function: fn(Int) -> Nil,
 ) -> RetryData(a, b) {
-  let yielder = yielder |> yielder.map(int.max(_, 0))
+  case max_attempts <= 0 {
+    True -> RetryData(result: Error(RetriesExhausted([])), wait_times: [])
+    False -> {
+      let yielder = yielder |> yielder.take(max_attempts - 1)
+      let yielder =
+        yielder.from_list([0])
+        |> yielder.append(yielder)
+        |> yielder.map(int.max(_, 0))
 
-  do_execute(
-    yielder: yielder,
-    operation: operation,
-    allow: allow,
-    wait_function: wait_function,
-    wait_time_acc: [],
-    errors_acc: [],
-    attempt_number: 0,
-  )
+      do_execute(
+        yielder: yielder,
+        allow: allow,
+        max_attempts: max_attempts,
+        operation: operation,
+        wait_function: wait_function,
+        wait_time_acc: [],
+        errors_acc: [],
+        attempt_number: 0,
+      )
+    }
+  }
 }
 
 fn do_execute(
   yielder yielder: Yielder(Int),
-  operation operation: fn(Int) -> Result(a, b),
   allow allow: fn(b) -> Bool,
+  max_attempts max_attempts: Int,
+  operation operation: fn(Int) -> Result(a, b),
   wait_function wait_function: fn(Int) -> Nil,
   wait_time_acc wait_time_acc: List(Int),
   errors_acc errors_acc: List(b),
@@ -114,7 +127,6 @@ fn do_execute(
   case yielder |> yielder.step() {
     yielder.Next(wait_time, yielder) -> {
       wait_function(wait_time)
-
       let wait_time_acc = [wait_time, ..wait_time_acc]
 
       case operation(attempt_number) {
@@ -128,8 +140,9 @@ fn do_execute(
             True ->
               do_execute(
                 yielder: yielder,
-                operation: operation,
                 allow: allow,
+                max_attempts: max_attempts,
+                operation: operation,
                 wait_function: wait_function,
                 wait_time_acc: wait_time_acc,
                 errors_acc: [error, ..errors_acc],
