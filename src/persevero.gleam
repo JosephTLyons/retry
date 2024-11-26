@@ -35,7 +35,7 @@ pub opaque type Config(a, b) {
 /// and `backoff` function.
 ///
 /// The `backoff` function determines how the wait time changes
-/// between retry attempts. It takes the current wait time as input and
+/// between retry attempts. It takes the previous wait time as input and
 /// returns the next wait time.
 ///
 /// Configuration defaults:
