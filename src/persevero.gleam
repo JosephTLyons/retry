@@ -32,9 +32,9 @@ pub opaque type Config(a, b) {
 }
 
 /// Creates a new configuration with the specified `max_attempts`, `wait_time`,
-/// and `next_wait_time` function.
+/// and `backoff` function.
 ///
-/// The `next_wait_time` function determines how the wait time changes
+/// The `backoff` function determines how the wait time changes
 /// between retry attempts. It takes the current wait time as input and
 /// returns the next wait time.
 ///
@@ -43,10 +43,10 @@ pub opaque type Config(a, b) {
 pub fn new(
   max_attempts max_attempts: Int,
   wait_time wait_time: Int,
-  next_wait_time next_wait_time: fn(Int) -> Int,
+  backoff backoff: fn(Int) -> Int,
 ) -> Config(a, b) {
   let yielder =
-    yielder.unfold(wait_time, fn(acc) { yielder.Next(acc, next_wait_time(acc)) })
+    yielder.unfold(wait_time, fn(acc) { yielder.Next(acc, backoff(acc)) })
   Config(yielder: yielder, max_attempts: max_attempts, allow: fn(_) { True })
 }
 
