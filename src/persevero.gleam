@@ -1,6 +1,5 @@
 //// `persevero` executes a fallible operation multiple times.
 
-import gleam/bool
 import gleam/erlang/process
 import gleam/int
 import gleam/list
@@ -125,23 +124,23 @@ fn do_execute(
             wait_times: wait_time_acc |> list.reverse,
           )
         Error(error) -> {
-          use <- bool.guard(
-            !allow(error),
-            RetryData(
-              result: Error(UnallowedError(error)),
-              wait_times: wait_time_acc |> list.reverse,
-            ),
-          )
-
-          do_execute(
-            yielder: yielder,
-            operation: operation,
-            allow: allow,
-            wait_function: wait_function,
-            wait_time_acc: wait_time_acc,
-            errors_acc: [error, ..errors_acc],
-            attempt_number: attempt_number + 1,
-          )
+          case allow(error) {
+            True ->
+              do_execute(
+                yielder: yielder,
+                operation: operation,
+                allow: allow,
+                wait_function: wait_function,
+                wait_time_acc: wait_time_acc,
+                errors_acc: [error, ..errors_acc],
+                attempt_number: attempt_number + 1,
+              )
+            False ->
+              RetryData(
+                result: Error(UnallowedError(error)),
+                wait_times: wait_time_acc |> list.reverse,
+              )
+          }
         }
       }
     }
