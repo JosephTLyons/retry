@@ -6,10 +6,6 @@ import gleam/int
 import gleam/list
 import gleam/yielder.{type Yielder}
 
-// TODO: Should max_attempts be a builder?
-// TODO: Should we simply output iterators between methods and avoid config, so
-// users can just use the yield module?
-
 /// Represents errors that can occur during a retry attempts.
 pub type RetryError(a) {
   /// Indicates that all retry attempts have been exhausted. Contains an ordered

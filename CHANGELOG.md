@@ -1,9 +1,5 @@
 # Changelog
 
-Breaking changes
-update examples
-new package name and location
-
 ## v0.2.0 - 2024-XX-XX
 
 - Added support for `max_wait_time()`.
