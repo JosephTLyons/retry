@@ -2,10 +2,9 @@
 
 import gleam/bool
 import gleam/erlang/process
-import gleam/function
 import gleam/int
 import gleam/list
-import gleam/option.{type Option, None, Some}
+import gleam/yielder.{type Yielder}
 
 /// Represents errors that can occur during a retry attempts.
 pub type RetryError(a) {
@@ -29,66 +28,55 @@ pub type RetryData(a, b) {
 }
 
 pub opaque type Config(a, b) {
-  Config(
-    max_attempts: Int,
-    wait_time: Int,
-    max_wait_time: Option(Int),
-    next_wait_time: fn(Int) -> Int,
-    allow: fn(b) -> Bool,
-  )
+  Config(yielder: Yielder(Int), max_attempts: Int, allow: fn(b) -> Bool)
 }
 
-/// Creates a new configuration with the specified `max_attempts` and
-/// `wait_time`.
+// TODO: Should max_attempts be a builder?
+
+/// Creates a new configuration with the specified `max_attempts`, `wait_time`,
+/// and `next_wait_time` function.
+///
+/// The `next_wait_time` function determines how the wait time changes
+/// between retry attempts. It takes the current wait time as input and
+/// returns the next wait time.
 ///
 /// Configuration defaults:
-/// - `next_wait_time`: constant
 /// - `allow`: all errors
-/// - `max_wait_time`: None
 pub fn new(
   max_attempts max_attempts: Int,
   wait_time wait_time: Int,
-) -> Config(a, b) {
-  Config(
-    max_attempts: max_attempts,
-    wait_time: wait_time,
-    max_wait_time: None,
-    next_wait_time: function.identity,
-    allow: fn(_) { True },
-  )
-}
-
-/// Sets the backoff strategy for increasing wait times between retry attempts.
-/// Expects a function that takes the previous wait time and returns a the next
-/// wait time.
-pub fn backoff(
-  config: Config(a, b),
   next_wait_time next_wait_time: fn(Int) -> Int,
 ) -> Config(a, b) {
-  Config(..config, next_wait_time: next_wait_time)
+  let yielder =
+    yielder.unfold(wait_time, fn(acc) { yielder.Next(acc, next_wait_time(acc)) })
+  Config(yielder: yielder, max_attempts: max_attempts, allow: fn(_) { True })
 }
 
 /// Sets the logic for determining whether an error should trigger a retry.
 /// Expects a function that takes an error and returns a boolean. Use this
 /// function to match on your error types and return `True` for errors that
 /// should trigger a retry, and `False` for errors that should not.
-pub fn allow(config: Config(a, b), allow allow: fn(b) -> Bool) -> Config(a, b) {
+pub fn allow(
+  config config: Config(a, b),
+  allow allow: fn(b) -> Bool,
+) -> Config(a, b) {
   Config(..config, allow: allow)
 }
 
 /// Sets a maximum time limit to wait between retries.
 pub fn max_wait_time(
-  config: Config(a, b),
+  config config: Config(a, b),
   max_wait_time max_wait_time: Int,
 ) -> Config(a, b) {
-  Config(..config, max_wait_time: Some(max_wait_time))
+  let yielder = config.yielder |> yielder.map(int.min(_, max_wait_time))
+  Config(..config, yielder: yielder)
 }
 
 /// Initiates the retry operation with the provided configuration and operation.
 ///
 /// Returns `Ok(a)` if the operation succeeds, or `Error(RetryError(b))`.
 pub fn execute(
-  config: Config(a, b),
+  config config: Config(a, b),
   operation operation: fn() -> Result(a, b),
 ) -> RetryResult(a, b) {
   execute_with_wait(
@@ -104,8 +92,15 @@ pub fn execute_with_wait(
   wait_function wait_function: fn(Int) -> Nil,
   operation operation: fn(Int) -> Result(a, b),
 ) -> RetryData(a, b) {
+  let yielder =
+    yielder.from_list([0])
+    |> yielder.append(config.yielder)
+    |> yielder.take(config.max_attempts)
+    |> yielder.map(int.max(_, 0))
+
   do_execute(
     config: config,
+    yielder: yielder,
     wait_function: wait_function,
     errors_acc: [],
     wait_time_acc: [],
@@ -116,54 +111,51 @@ pub fn execute_with_wait(
 
 fn do_execute(
   config config: Config(a, b),
+  yielder yielder: Yielder(Int),
   wait_function wait_function: fn(Int) -> Nil,
   errors_acc errors_acc: List(b),
   wait_time_acc wait_time_acc: List(Int),
   operation operation: fn(Int) -> Result(a, b),
   attempt_number attempt_number: Int,
 ) -> RetryData(a, b) {
-  use <- bool.guard(
-    attempt_number >= config.max_attempts,
-    RetryData(
-      result: Error(RetriesExhausted(errors_acc |> list.reverse)),
-      wait_times: wait_time_acc |> list.reverse,
-    ),
-  )
+  case yielder |> yielder.step() {
+    yielder.Next(wait_time, yielder) -> {
+      wait_function(wait_time)
 
-  let wait_time = case wait_time_acc {
-    [] -> 0
-    [0, ..] -> config.wait_time
-    [wait_time, ..] -> wait_time |> config.next_wait_time
-  }
+      let wait_time_acc = [wait_time, ..wait_time_acc]
 
-  let max_wait_time = config.max_wait_time |> option.unwrap(wait_time)
-  let wait_time = wait_time |> int.clamp(0, max_wait_time)
+      case operation(attempt_number) {
+        Ok(result) ->
+          RetryData(
+            result: Ok(result),
+            wait_times: wait_time_acc |> list.reverse,
+          )
+        Error(error) -> {
+          use <- bool.guard(
+            !config.allow(error),
+            RetryData(
+              result: Error(UnallowedError(error)),
+              wait_times: wait_time_acc |> list.reverse,
+            ),
+          )
 
-  wait_function(wait_time)
-
-  let wait_time_acc = [wait_time, ..wait_time_acc]
-
-  case operation(attempt_number) {
-    Ok(result) ->
-      RetryData(result: Ok(result), wait_times: wait_time_acc |> list.reverse)
-    Error(error) -> {
-      use <- bool.guard(
-        !config.allow(error),
-        RetryData(
-          result: Error(UnallowedError(error)),
-          wait_times: wait_time_acc |> list.reverse,
-        ),
-      )
-
-      do_execute(
-        config: config,
-        wait_function: wait_function,
-        errors_acc: [error, ..errors_acc],
-        wait_time_acc: wait_time_acc,
-        operation: operation,
-        attempt_number: attempt_number + 1,
-      )
+          do_execute(
+            config: config,
+            yielder: yielder,
+            wait_function: wait_function,
+            errors_acc: [error, ..errors_acc],
+            wait_time_acc: wait_time_acc,
+            operation: operation,
+            attempt_number: attempt_number + 1,
+          )
+        }
+      }
     }
+    yielder.Done ->
+      RetryData(
+        result: Error(RetriesExhausted(errors_acc |> list.reverse)),
+        wait_times: wait_time_acc |> list.reverse,
+      )
   }
 }
 
