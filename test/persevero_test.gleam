@@ -231,7 +231,7 @@ pub fn retry_with_custom_backoff_test() {
   )
 }
 
-pub fn retry_with_multiplier_succeeds_after_allowed_errors_test() {
+pub fn retry_with_backoff_succeeds_after_allowed_errors_test() {
   let times = 4
   let result_returning_function =
     result_returning_function(times: times, results: [
