@@ -344,4 +344,3 @@ fn result_returning_function(
     }
   }
 }
-// TODO test that ordering of builders affects output
