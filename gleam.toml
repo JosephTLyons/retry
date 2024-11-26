@@ -1,9 +1,9 @@
-name = "gleam_retry"
+name = "persevero"
 version = "0.1.1"
 
 description = "Retry code that can fail."
 licences = ["Apache-2.0"]
-repository = { type = "github", user = "JosephTLyons", repo = "retry" }
+repository = { type = "github", user = "JosephTLyons", repo = "persevero" }
 
 [dependencies]
 gleam_stdlib = ">= 0.34.0 and < 2.0.0"

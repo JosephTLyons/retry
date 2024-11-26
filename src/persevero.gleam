@@ -1,10 +1,14 @@
-//// `retry` executes a fallible operation multiple times.
+//// `persevero` executes a fallible operation multiple times.
 
 import gleam/bool
 import gleam/erlang/process
 import gleam/int
 import gleam/list
 import gleam/yielder.{type Yielder}
+
+// TODO: Should max_attempts be a builder?
+// TODO: Should we simply output iterators between methods and avoid config, so
+// users can just use the yield module?
 
 /// Represents errors that can occur during a retry attempts.
 pub type RetryError(a) {
@@ -30,8 +34,6 @@ pub type RetryData(a, b) {
 pub opaque type Config(a, b) {
   Config(yielder: Yielder(Int), max_attempts: Int, allow: fn(b) -> Bool)
 }
-
-// TODO: Should max_attempts be a builder?
 
 /// Creates a new configuration with the specified `max_attempts`, `wait_time`,
 /// and `next_wait_time` function.

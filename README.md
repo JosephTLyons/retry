@@ -1,19 +1,19 @@
-# retry
+# persevero
 
-[![Package Version](https://img.shields.io/hexpm/v/retry)](https://hex.pm/packages/gleam_retry)
-[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/gleam_retry/)
+[![Package Version](https://img.shields.io/hexpm/v/persevero)](https://hex.pm/packages/persevero)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/persevero/)
 
 Retry code that can fail.
 
 ## Usage
 
 ```sh
-gleam add retry@1
+gleam add persevero@1
 ```
 
 ```gleam
 import gleam/int
-import gleam/retry
+import persevero
 
 pub type NetworkError {
   ServerDown
@@ -23,9 +23,9 @@ pub type NetworkError {
 }
 
 pub fn main() {
-  retry.new(max_attempts: 5, wait_time: 1000)
+  persevero.new(max_attempts: 5, wait_time: 1000)
   // Optional configuration
-  |> retry.allow(allow: fn(error) {
+  |> persevero.allow(allow: fn(error) {
     case error {
       InvalidStatusCode(code) if code >= 500 && code < 600 -> True
       Timeout(_) -> True
@@ -33,10 +33,10 @@ pub fn main() {
     }
   })
   // Optional configuration
-  |> retry.backoff(next_wait_time: int.multiply(_, 2))
+  |> persevero.backoff(next_wait_time: int.multiply(_, 2))
   // Optional configuration
-  |> retry.max_wait_time(10000)
-  |> retry.execute(operation: fn() {
+  |> persevero.max_wait_time(10000)
+  |> persevero.execute(operation: fn() {
     case int.random(4) {
       0 -> Error(ServerDown)
       1 -> Error(Timeout(5000))
@@ -50,4 +50,4 @@ pub fn main() {
 
 ## Targets
 
-`retry` supports the Erlang target.
+`persevero` supports the Erlang target.

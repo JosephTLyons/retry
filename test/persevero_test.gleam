@@ -1,10 +1,10 @@
 import gleam/function
 import gleam/int
 import gleam/option.{None, Some}
-import gleam/retry.{type RetryData, RetriesExhausted, RetryData, UnallowedError}
 import gleeunit
 import gleeunit/should
 import list_extensions.{at}
+import persevero.{type RetryData, RetriesExhausted, RetryData, UnallowedError}
 
 pub fn main() {
   gleeunit.main()
@@ -30,8 +30,8 @@ pub fn negative_retry_attempts_returns_retries_exhausted_error_test() {
       Error(InvalidResponse),
     ])
 
-  retry.new(times, 100, function.identity)
-  |> retry.execute_with_wait(
+  persevero.new(times, 100, function.identity)
+  |> persevero.execute_with_wait(
     wait_function: fake_wait,
     operation: result_returning_function,
   )
@@ -53,8 +53,8 @@ pub fn retry_exhausts_all_attempts_and_fails_test() {
       Error(InvalidResponse),
     ])
 
-  retry.new(times, 100, function.identity)
-  |> retry.execute_with_wait(
+  persevero.new(times, 100, function.identity)
+  |> persevero.execute_with_wait(
     wait_function: fake_wait,
     operation: result_returning_function,
   )
@@ -82,14 +82,14 @@ pub fn retry_fails_on_non_allowed_error_test() {
       Ok(SuccessfulConnection),
     ])
 
-  retry.new(times, 100, function.identity)
-  |> retry.allow(fn(error) {
+  persevero.new(times, 100, function.identity)
+  |> persevero.allow(fn(error) {
     case error {
       ConnectionTimeout | InvalidResponse -> True
       _ -> False
     }
   })
-  |> retry.execute_with_wait(
+  |> persevero.execute_with_wait(
     wait_function: fake_wait,
     operation: result_returning_function,
   )
@@ -115,14 +115,14 @@ pub fn retry_succeeds_on_allowed_errors_test() {
       Error(InvalidResponse),
     ])
 
-  retry.new(times, 100, function.identity)
-  |> retry.allow(fn(error) {
+  persevero.new(times, 100, function.identity)
+  |> persevero.allow(fn(error) {
     case error {
       ConnectionTimeout | ServerUnavailable -> True
       _ -> False
     }
   })
-  |> retry.execute_with_wait(
+  |> persevero.execute_with_wait(
     wait_function: fake_wait,
     operation: result_returning_function,
   )
@@ -146,8 +146,8 @@ pub fn retry_succeeds_when_all_errors_are_allowed_test() {
       Ok(ValidData),
     ])
 
-  retry.new(times, 100, function.identity)
-  |> retry.execute_with_wait(
+  persevero.new(times, 100, function.identity)
+  |> persevero.execute_with_wait(
     wait_function: fake_wait,
     operation: result_returning_function,
   )
@@ -171,8 +171,8 @@ pub fn retry_with_exponential_backoff_test() {
       Ok(ValidData),
     ])
 
-  retry.new(times, 100, int.multiply(_, 2))
-  |> retry.execute_with_wait(
+  persevero.new(times, 100, int.multiply(_, 2))
+  |> persevero.execute_with_wait(
     wait_function: fake_wait,
     operation: result_returning_function,
   )
@@ -196,8 +196,8 @@ pub fn retry_with_linear_backoff_test() {
       Ok(ValidData),
     ])
 
-  retry.new(times, 100, int.add(_, 100))
-  |> retry.execute_with_wait(
+  persevero.new(times, 100, int.add(_, 100))
+  |> persevero.execute_with_wait(
     wait_function: fake_wait,
     operation: result_returning_function,
   )
@@ -221,8 +221,8 @@ pub fn retry_with_custom_backoff_test() {
       Ok(ValidData),
     ])
 
-  retry.new(times, 100, fn(wait) { wait |> int.add(100) |> int.multiply(2) })
-  |> retry.execute_with_wait(
+  persevero.new(times, 100, fn(wait) { wait |> int.add(100) |> int.multiply(2) })
+  |> persevero.execute_with_wait(
     wait_function: fake_wait,
     operation: result_returning_function,
   )
@@ -246,14 +246,14 @@ pub fn retry_with_multiplier_succeeds_after_allowed_errors_test() {
       Error(InvalidResponse),
     ])
 
-  retry.new(times, 100, int.multiply(_, 3))
-  |> retry.allow(fn(error) {
+  persevero.new(times, 100, int.multiply(_, 3))
+  |> persevero.allow(fn(error) {
     case error {
       ConnectionTimeout | ServerUnavailable -> True
       _ -> False
     }
   })
-  |> retry.execute_with_wait(
+  |> persevero.execute_with_wait(
     wait_function: fake_wait,
     operation: result_returning_function,
   )
@@ -277,8 +277,8 @@ pub fn retry_with_negative_wait_time_configuration_test() {
       Error(InvalidResponse),
     ])
 
-  retry.new(times, -100, int.subtract(_, 1000))
-  |> retry.execute_with_wait(
+  persevero.new(times, -100, int.subtract(_, 1000))
+  |> persevero.execute_with_wait(
     wait_function: fake_wait,
     operation: result_returning_function,
   )
@@ -306,15 +306,15 @@ pub fn retry_with_max_wait_time_configuration_test() {
       Error(InvalidResponse),
     ])
 
-  retry.new(times, 500, int.multiply(_, 2))
-  |> retry.allow(fn(error) {
+  persevero.new(times, 500, int.multiply(_, 2))
+  |> persevero.allow(fn(error) {
     case error {
       ConnectionTimeout | ServerUnavailable -> True
       _ -> False
     }
   })
-  |> retry.max_wait_time(1000)
-  |> retry.execute_with_wait(
+  |> persevero.max_wait_time(1000)
+  |> persevero.execute_with_wait(
     wait_function: fake_wait,
     operation: result_returning_function,
   )
@@ -344,3 +344,4 @@ fn result_returning_function(
     }
   }
 }
+// TODO test that ordering of builders affects output
