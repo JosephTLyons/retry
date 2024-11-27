@@ -135,10 +135,10 @@ pub fn execute_with_wait(
   case max_attempts <= 0 {
     True -> RetryData(result: Error(RetriesExhausted([])), wait_times: [])
     False -> {
-      let wait_stream = wait_stream |> yielder.take(max_attempts - 1)
       let wait_stream =
-        yielder.from_list([0])
-        |> yielder.append(wait_stream)
+        wait_stream
+        |> yielder_prepend(0)
+        |> yielder.take(max_attempts)
         |> yielder.map(int.max(_, 0))
 
       do_execute(
@@ -153,6 +153,11 @@ pub fn execute_with_wait(
       )
     }
   }
+}
+
+fn yielder_prepend(yielder: Yielder(a), element: a) -> Yielder(a) {
+  use <- yielder.yield(element)
+  yielder
 }
 
 fn do_execute(
