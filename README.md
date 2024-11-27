@@ -5,7 +5,7 @@
 
 Execute fallible operations multiple times.
 
-```
+```txt
 ⚠️ As we're still iterating and refining this pre-v1.0 library, the API may evolve to accommodate missing features and improvements.
 ```
 
