@@ -26,9 +26,9 @@ pub fn retry_exhausts_all_attempts_and_fails_with_no_backoff_test() {
     result_returning_function(times: times, results: [
       // 1, wait 0
       Error(ConnectionTimeout),
-      // 2, wait 100
+      // 2, wait 0
       Error(ServerUnavailable),
-      // 3, wait 100
+      // 3, wait 0
       // error
       Error(InvalidResponse),
     ])
@@ -126,6 +126,8 @@ pub fn one_retry_attempts_returns_retries_exhausted_error_test() {
   let times = 1
   let result_returning_function =
     result_returning_function(times: times, results: [
+      // 1, wait 0
+      // error
       Error(ConnectionTimeout),
       Error(ServerUnavailable),
       Error(InvalidResponse),
@@ -308,16 +310,16 @@ pub fn retry_succeeds_on_allowed_errors_apply_constant_after_cap_test() {
     result_returning_function(times: times, results: [
       // 1, wait 0
       Error(ConnectionTimeout),
-      // 2, wait 100
+      // 2, wait 53
       Error(ServerUnavailable),
-      // 3, wait 100
+      // 3, wait 103
       // succeed
       Ok(SuccessfulConnection),
       // Doesn't reach
       Error(InvalidResponse),
     ])
 
-  persevero.exponential_backoff(50, 2)
+  persevero.exponential_backoff(50, 3)
   |> persevero.apply_cap(100)
   |> persevero.apply_constant(3)
   |> persevero.execute_with_wait(
@@ -342,7 +344,7 @@ pub fn retry_succeeds_on_allowed_errors_apply_constant_before_cap_test() {
     result_returning_function(times: times, results: [
       // 1, wait 0
       Error(ConnectionTimeout),
-      // 2, wait 100
+      // 2, wait 53
       Error(ServerUnavailable),
       // 3, wait 100
       // succeed
