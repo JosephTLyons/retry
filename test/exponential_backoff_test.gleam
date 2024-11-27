@@ -7,6 +7,7 @@ import persevero.{RetryData}
 import test_utils.{fake_wait, result_returning_function}
 
 // -------------------- Success
+
 pub fn positive_4_exponential_backoff_on_some_allowed_errors_with_apply_constant_multiplier_is_successful_test() {
   let times = 4
   let result_returning_function =
