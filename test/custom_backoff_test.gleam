@@ -5,7 +5,9 @@ import mock_types.{
 import persevero.{RetryData}
 import test_utils.{fake_wait, result_returning_function}
 
-pub fn retry_with_custom_backoff_test() {
+// -------------------- Success
+
+pub fn positive_4_custom_backoff_is_successful_test() {
   let times = 4
   let result_returning_function =
     result_returning_function(times: times, results: [

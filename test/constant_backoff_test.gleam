@@ -6,8 +6,10 @@ import mock_types.{
 import persevero.{RetriesExhausted, RetryData, UnallowedError}
 import test_utils.{fake_wait, result_returning_function}
 
-pub fn retry_exhausts_all_attempts_and_fails_with_constant_backoff_test() {
-  let times = 3
+// -------------------- Success
+
+pub fn positive_4_constant_backoff_with_some_allowed_errors_is_successful_test() {
+  let times = 4
   let result_returning_function =
     result_returning_function(times: times, results: [
       // 1, wait 0
@@ -15,8 +17,42 @@ pub fn retry_exhausts_all_attempts_and_fails_with_constant_backoff_test() {
       // 2, wait 100
       Error(ServerUnavailable),
       // 3, wait 100
-      // error
+      // succeed
+      Ok(SuccessfulConnection),
+      // Doesn't reach
       Error(InvalidResponse),
+    ])
+
+  persevero.constant_backoff(100)
+  |> persevero.execute_with_wait(
+    wait_function: fake_wait,
+    allow: fn(error) {
+      case error {
+        ConnectionTimeout | ServerUnavailable -> True
+        _ -> False
+      }
+    },
+    max_attempts: times,
+    operation: result_returning_function,
+  )
+  |> should.equal(
+    RetryData(result: Ok(SuccessfulConnection), wait_times: [0, 100, 100]),
+  )
+}
+
+pub fn positive_4_constant_backoff_with_all_allowed_errors_is_successful_test() {
+  let times = 4
+  let result_returning_function =
+    result_returning_function(times: times, results: [
+      // 1, wait 0
+      Error(ConnectionTimeout),
+      // 2, wait 100
+      Error(ServerUnavailable),
+      // 3, wait 100
+      Error(InvalidResponse),
+      // 4, wait 100
+      // succeed
+      Ok(ValidData),
     ])
 
   persevero.constant_backoff(100)
@@ -27,16 +63,13 @@ pub fn retry_exhausts_all_attempts_and_fails_with_constant_backoff_test() {
     operation: result_returning_function,
   )
   |> should.equal(
-    RetryData(
-      result: Error(
-        RetriesExhausted([ConnectionTimeout, ServerUnavailable, InvalidResponse]),
-      ),
-      wait_times: [0, 100, 100],
-    ),
+    RetryData(result: Ok(ValidData), wait_times: [0, 100, 100, 100]),
   )
 }
 
-pub fn negative_retry_attempts_returns_retries_exhausted_error_test() {
+// -------------------- Failure
+
+pub fn negative_1_times_fails_with_retries_exhausted_test() {
   let times = -1
   let result_returning_function =
     result_returning_function(times: times, results: [
@@ -57,7 +90,7 @@ pub fn negative_retry_attempts_returns_retries_exhausted_error_test() {
   )
 }
 
-pub fn no_retry_attempts_returns_retries_exhausted_error_test() {
+pub fn positive_0_times_fails_with_retries_exhausted_test() {
   let times = 0
   let result_returning_function =
     result_returning_function(times: times, results: [
@@ -78,7 +111,7 @@ pub fn no_retry_attempts_returns_retries_exhausted_error_test() {
   )
 }
 
-pub fn one_retry_attempts_returns_retries_exhausted_error_test() {
+pub fn positive_1_times_fails_with_retries_exhausted_test() {
   let times = 1
   let result_returning_function =
     result_returning_function(times: times, results: [
@@ -103,7 +136,7 @@ pub fn one_retry_attempts_returns_retries_exhausted_error_test() {
   )
 }
 
-pub fn retry_exhausts_all_attempts_and_fails_test() {
+pub fn positive_3_times_fails_with_retries_exhausted_test() {
   let times = 3
   let result_returning_function =
     result_returning_function(times: times, results: [
@@ -163,64 +196,5 @@ pub fn retry_fails_on_non_allowed_error_test() {
     RetryData(result: Error(UnallowedError(ServerUnavailable)), wait_times: [
       0, 100,
     ]),
-  )
-}
-
-pub fn retry_succeeds_on_allowed_errors_test() {
-  let times = 4
-  let result_returning_function =
-    result_returning_function(times: times, results: [
-      // 1, wait 0
-      Error(ConnectionTimeout),
-      // 2, wait 100
-      Error(ServerUnavailable),
-      // 3, wait 100
-      // succeed
-      Ok(SuccessfulConnection),
-      // Doesn't reach
-      Error(InvalidResponse),
-    ])
-
-  persevero.constant_backoff(100)
-  |> persevero.execute_with_wait(
-    wait_function: fake_wait,
-    allow: fn(error) {
-      case error {
-        ConnectionTimeout | ServerUnavailable -> True
-        _ -> False
-      }
-    },
-    max_attempts: times,
-    operation: result_returning_function,
-  )
-  |> should.equal(
-    RetryData(result: Ok(SuccessfulConnection), wait_times: [0, 100, 100]),
-  )
-}
-
-pub fn retry_succeeds_when_all_errors_are_allowed_test() {
-  let times = 4
-  let result_returning_function =
-    result_returning_function(times: times, results: [
-      // 1, wait 0
-      Error(ConnectionTimeout),
-      // 2, wait 100
-      Error(ServerUnavailable),
-      // 3, wait 100
-      Error(InvalidResponse),
-      // 4, wait 100
-      // succeed
-      Ok(ValidData),
-    ])
-
-  persevero.constant_backoff(100)
-  |> persevero.execute_with_wait(
-    wait_function: fake_wait,
-    allow: fn(_) { True },
-    max_attempts: times,
-    operation: result_returning_function,
-  )
-  |> should.equal(
-    RetryData(result: Ok(ValidData), wait_times: [0, 100, 100, 100]),
   )
 }

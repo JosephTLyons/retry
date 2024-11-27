@@ -3,7 +3,9 @@ import mock_types.{ConnectionTimeout, InvalidResponse, ServerUnavailable}
 import persevero.{RetriesExhausted, RetryData}
 import test_utils.{fake_wait, result_returning_function}
 
-pub fn retry_exhausts_all_attempts_and_fails_with_no_backoff_test() {
+// -------------------- Failure
+
+pub fn positive_3_no_backoff_fails_with_retries_exhausted_test() {
   let times = 3
   let result_returning_function =
     result_returning_function(times: times, results: [

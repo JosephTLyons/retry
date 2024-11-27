@@ -6,7 +6,8 @@ import mock_types.{
 import persevero.{RetryData}
 import test_utils.{fake_wait, result_returning_function}
 
-pub fn retry_succeeds_on_allowed_errors_apply_constant_and_multiplier_test() {
+// -------------------- Success
+pub fn positive_4_exponential_backoff_on_some_allowed_errors_with_apply_constant_multiplier_is_successful_test() {
   let times = 4
   let result_returning_function =
     result_returning_function(times: times, results: [
@@ -41,7 +42,7 @@ pub fn retry_succeeds_on_allowed_errors_apply_constant_and_multiplier_test() {
   )
 }
 
-pub fn retry_succeeds_on_allowed_errors_apply_constant_after_cap_test() {
+pub fn positive_4_exponential_backoff_on_some_allowed_errors_with_apply_cap_constant_is_successful_test() {
   let times = 4
   let result_returning_function =
     result_returning_function(times: times, results: [
@@ -75,7 +76,7 @@ pub fn retry_succeeds_on_allowed_errors_apply_constant_after_cap_test() {
   )
 }
 
-pub fn retry_succeeds_on_allowed_errors_apply_constant_before_cap_test() {
+pub fn positive_4_exponential_backoff_on_some_allowed_errors_with_apply_constant_cap_is_successful_test() {
   let times = 4
   let result_returning_function =
     result_returning_function(times: times, results: [
@@ -109,7 +110,7 @@ pub fn retry_succeeds_on_allowed_errors_apply_constant_before_cap_test() {
   )
 }
 
-pub fn retry_with_exponential_backoff_test() {
+pub fn positive_4_exponential_backoff_on_all_allowed_errors_is_successful_test() {
   let times = 4
   let result_returning_function =
     result_returning_function(times: times, results: [
@@ -136,7 +137,7 @@ pub fn retry_with_exponential_backoff_test() {
   )
 }
 
-pub fn retry_with_backoff_succeeds_after_allowed_errors_test() {
+pub fn positive_4_exponential_backoff_on_some_allowed_errors_is_successful_test() {
   let times = 4
   let result_returning_function =
     result_returning_function(times: times, results: [
@@ -168,7 +169,7 @@ pub fn retry_with_backoff_succeeds_after_allowed_errors_test() {
   )
 }
 
-pub fn retry_with_cap_configuration_test() {
+pub fn positive_5_exponential_backoff_on_some_allowed_errors_with_apply_cap_is_successful_test() {
   let times = 5
   let result_returning_function =
     result_returning_function(times: times, results: [
