@@ -1,6 +1,6 @@
 import gleam/int
 import gleam/option.{None, Some}
-import list_extensions
+import internal/list_extensions
 
 pub fn fake_wait(_) -> Nil {
   Nil

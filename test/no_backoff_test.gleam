@@ -1,7 +1,7 @@
 import gleeunit/should
+import internal/test_utils.{fake_wait, result_returning_function}
 import mock_types.{ConnectionTimeout, InvalidResponse, ServerUnavailable}
 import persevero.{RetriesExhausted, RetryData}
-import test_utils.{fake_wait, result_returning_function}
 
 // -------------------- Failure
 
