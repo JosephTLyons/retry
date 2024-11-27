@@ -70,7 +70,7 @@ ultimate wait stream manipulation:
 
 ```gleam
 import persevero
-import yielder
+import gleam/yielder
 
 pub fn main() {
   use <- persevero.execute(
