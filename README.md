@@ -32,8 +32,9 @@ pub fn network_request() -> Result(String, NetworkError) {
 }
 
 pub fn main() {
-  persevero.new(wait_time: 500, backoff: int.multiply(_, 2))
-  |> persevero.max_wait_time(5000)
+  persevero.exponential_backoff(500, 2)
+  |> persevero.apply_jitter(20)
+  |> persevero.apply_cap(5000)
   |> persevero.execute(
     allow: fn(error) {
       case error {
