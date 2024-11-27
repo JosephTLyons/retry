@@ -5,11 +5,13 @@
 
 Execute fallible operations multiple times.
 
-## Usage
+## Installation
 
 ```sh
 gleam add persevero@1
 ```
+
+## Usage
 
 A simple example:
 
