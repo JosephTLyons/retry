@@ -54,7 +54,7 @@ pub fn constant_backoff(wait_time wait_time: Int) -> Yielder(Int) {
 /// Produces a wait stream that increases linearly for each attempt.
 /// Ex: 500ms, 1000ms, 1500ms, ...
 pub fn linear_backoff(wait_time wait_time: Int, step step: Int) -> Yielder(Int) {
-  yielder.iterate(wait_time, fn(previous) { previous + step })
+  yielder.iterate(wait_time, int.add(_, step))
 }
 
 /// Produces a wait stream that increases exponentially for each attempt.
@@ -64,7 +64,7 @@ pub fn exponential_backoff(
   wait_time wait_time: Int,
   factor factor: Int,
 ) -> Yielder(Int) {
-  yielder.iterate(wait_time, fn(previous) { previous * factor })
+  yielder.iterate(wait_time, int.multiply(_, factor))
 }
 
 /// Adds a random integer between [1, `upper_bound`] to each wait time.
