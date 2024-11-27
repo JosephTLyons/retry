@@ -24,49 +24,41 @@ pub type RetryData(a, b) {
   RetryData(result: RetryResult(a, b), wait_times: List(Int))
 }
 
-/// Convenience function: provide this to `new`'s `backoff` parameter for no
-/// backoff. Equivalent to passing `fn(_) { 0 }`. Warning: You usually do not
-/// want to use this function, as it will produce a stream of 0s, regardless of
-/// the initial wait time.
-pub fn no_backoff(_: Int) -> Int {
-  0
-}
-
-/// Convenience function: provide this to `new`'s `backoff` parameter for
-/// constant backoff. Equivalent to passing `function.identity`.
-pub fn constant_backoff(wait_time wait_time: Int) -> Int {
-  wait_time
-}
-
-/// Convenience function: provide this to `new`'s `backoff` parameter for linear
-/// backoff. Evuivalent to passing `int.add`.
-pub fn linear_backoff(wait_time wait_time: Int, increment increment: Int) -> Int {
-  wait_time + increment
-}
-
-/// Convenience function: provide this to `new`'s `backoff` parameter for
-/// exponential backoff. Equivalent to passing `int.multiply`.
-pub fn exponential_backoff(wait_time wait_time: Int, factor factor: Int) -> Int {
-  wait_time * factor
-}
-
-/// Creates a new configuration with the specified `wait_time` and `backoff`
-/// function.
-///
-/// The `backoff` function determines how the wait time changes between
-/// attempts. It takes the previous wait time as input and returns the next wait
-/// time.
-pub fn new(
+/// Produces a delay stream with custom backoff logic.
+pub fn custom_backoff(
   wait_time wait_time: Int,
-  backoff backoff: fn(Int) -> Int,
+  custom custom: fn(Int) -> Int,
 ) -> Yielder(Int) {
-  // This feels a bit of a hacky way to handle a bug in no_backoff - find a
-  // better solution
-  let wait_time = case backoff(wait_time) {
-    0 -> 0
-    _ -> wait_time
-  }
-  yielder.unfold(wait_time, fn(acc) { yielder.Next(acc, backoff(acc)) })
+  yielder.unfold(wait_time, fn(acc) { yielder.Next(acc, custom(acc)) })
+}
+
+/// Produces a 0ms-delay stream: 0, 0, 0, ...
+pub fn no_backoff() -> Yielder(Int) {
+  custom_backoff(wait_time: 0, custom: fn(_) { 0 })
+}
+
+/// Produces a delay stream that waits for a constant amount of time: 500, 500,
+/// 500, ...
+pub fn constant_backoff(wait_time wait_time: Int) -> Yielder(Int) {
+  custom_backoff(wait_time: wait_time, custom: fn(acc) { acc + 0 })
+}
+
+/// Produces a delay stream that waits for a linearly-increasing amount of time:
+/// 500, 1000, 1500, ...
+pub fn linear_backoff(
+  wait_time wait_time: Int,
+  increment increment: Int,
+) -> Yielder(Int) {
+  custom_backoff(wait_time: wait_time, custom: fn(acc) { acc + increment })
+}
+
+/// Produces a delay stream that waits for an exponentially-increasing amount of
+/// time: 500, 1000, 2000, 4000, ...
+pub fn exponential_backoff(
+  wait_time wait_time: Int,
+  factor factor: Int,
+) -> Yielder(Int) {
+  custom_backoff(wait_time: wait_time, custom: fn(acc) { acc * factor })
 }
 
 /// Adds a random integer between [1, `upper_bound`] to each wait time.
