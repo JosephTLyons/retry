@@ -1,6 +1,7 @@
 //// `persevero` executes a fallible operation multiple times.
 
 import gleam/erlang/process
+import gleam/function
 import gleam/int
 import gleam/list
 import gleam/yielder.{type Yielder}
@@ -35,28 +36,24 @@ pub fn custom_backoff(
   wait_time wait_time: Int,
   next_wait_time next_wait_time: fn(Int) -> Int,
 ) -> Yielder(Int) {
-  yielder.unfold(wait_time, fn(acc) { yielder.Next(acc, next_wait_time(acc)) })
+  yielder.iterate(wait_time, next_wait_time)
 }
 
 /// Produces a 0ms-delay stream: 0, 0, 0, ...
 pub fn no_backoff() -> Yielder(Int) {
-  custom_backoff(wait_time: 0, next_wait_time: fn(_) { 0 })
+  yielder.repeat(0)
 }
 
 /// Produces a delay stream that waits for a constant amount of time: 500, 500,
 /// 500, ...
 pub fn constant_backoff(wait_time wait_time: Int) -> Yielder(Int) {
-  custom_backoff(wait_time: wait_time, next_wait_time: fn(previous) {
-    previous + 0
-  })
+  yielder.iterate(wait_time, function.identity)
 }
 
 /// Produces a delay stream that waits for a linearly-increasing amount of time:
 /// 500, 1000, 1500, ...
 pub fn linear_backoff(wait_time wait_time: Int, step step: Int) -> Yielder(Int) {
-  custom_backoff(wait_time: wait_time, next_wait_time: fn(previous) {
-    previous + step
-  })
+  yielder.iterate(wait_time, fn(previous) { previous + step })
 }
 
 /// Produces a delay stream that waits for an exponentially-increasing amount of
@@ -65,9 +62,7 @@ pub fn exponential_backoff(
   wait_time wait_time: Int,
   factor factor: Int,
 ) -> Yielder(Int) {
-  custom_backoff(wait_time: wait_time, next_wait_time: fn(previous) {
-    previous * factor
-  })
+  yielder.iterate(wait_time, fn(previous) { previous * factor })
 }
 
 /// Adds a random integer between [1, `upper_bound`] to each wait time.
