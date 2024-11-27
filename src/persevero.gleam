@@ -31,7 +31,7 @@ pub fn all_errors(_: a) -> Bool {
   True
 }
 
-/// Produces a delay stream with custom backoff logic.
+/// Produces a custom wait stream.
 pub fn custom_backoff(
   wait_time wait_time: Int,
   next_wait_time next_wait_time: fn(Int) -> Int,
@@ -39,25 +39,27 @@ pub fn custom_backoff(
   yielder.iterate(wait_time, next_wait_time)
 }
 
-/// Produces a 0ms-delay stream: 0, 0, 0, ...
+/// Produces a 0ms wait stream.
+/// Ex: 0ms, 0ms, 0ms, ...
 pub fn no_backoff() -> Yielder(Int) {
   yielder.repeat(0)
 }
 
-/// Produces a delay stream that waits for a constant amount of time: 500, 500,
-/// 500, ...
+/// Produces a wait stream with a constant wait time.
+/// Ex: 500ms, 500ms, 500ms, ...
 pub fn constant_backoff(wait_time wait_time: Int) -> Yielder(Int) {
   yielder.iterate(wait_time, function.identity)
 }
 
-/// Produces a delay stream that waits for a linearly-increasing amount of time:
-/// 500, 1000, 1500, ...
+/// Produces a wait stream that increases linearly for each attempt.
+/// Ex: 500ms, 1000ms, 1500ms, ...
 pub fn linear_backoff(wait_time wait_time: Int, step step: Int) -> Yielder(Int) {
   yielder.iterate(wait_time, fn(previous) { previous + step })
 }
 
-/// Produces a delay stream that waits for an exponentially-increasing amount of
-/// time: 500, 1000, 2000, 4000, ...
+/// Produces a wait stream that increases exponentially for each attempt.
+/// time:
+/// Ex: 500ms, 1000ms, 2000ms, 4000ms, ...
 pub fn exponential_backoff(
   wait_time wait_time: Int,
   factor factor: Int,
