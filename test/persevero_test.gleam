@@ -439,7 +439,9 @@ pub fn retry_with_custom_backoff_test() {
       Ok(ValidData),
     ])
 
-  persevero.custom_backoff(100, fn(acc) { { acc + 100 } * 2 })
+  persevero.custom_backoff(wait_time: 100, next_wait_time: fn(previous) {
+    { previous + 100 } * 2
+  })
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     allow: fn(_) { True },

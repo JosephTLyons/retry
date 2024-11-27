@@ -27,26 +27,30 @@ pub type RetryData(a, b) {
 /// Produces a delay stream with custom backoff logic.
 pub fn custom_backoff(
   wait_time wait_time: Int,
-  custom custom: fn(Int) -> Int,
+  next_wait_time next_wait_time: fn(Int) -> Int,
 ) -> Yielder(Int) {
-  yielder.unfold(wait_time, fn(acc) { yielder.Next(acc, custom(acc)) })
+  yielder.unfold(wait_time, fn(acc) { yielder.Next(acc, next_wait_time(acc)) })
 }
 
 /// Produces a 0ms-delay stream: 0, 0, 0, ...
 pub fn no_backoff() -> Yielder(Int) {
-  custom_backoff(wait_time: 0, custom: fn(_) { 0 })
+  custom_backoff(wait_time: 0, next_wait_time: fn(_) { 0 })
 }
 
 /// Produces a delay stream that waits for a constant amount of time: 500, 500,
 /// 500, ...
 pub fn constant_backoff(wait_time wait_time: Int) -> Yielder(Int) {
-  custom_backoff(wait_time: wait_time, custom: fn(acc) { acc + 0 })
+  custom_backoff(wait_time: wait_time, next_wait_time: fn(previous) {
+    previous + 0
+  })
 }
 
 /// Produces a delay stream that waits for a linearly-increasing amount of time:
 /// 500, 1000, 1500, ...
 pub fn linear_backoff(wait_time wait_time: Int, step step: Int) -> Yielder(Int) {
-  custom_backoff(wait_time: wait_time, custom: fn(acc) { acc + step })
+  custom_backoff(wait_time: wait_time, next_wait_time: fn(previous) {
+    previous + step
+  })
 }
 
 /// Produces a delay stream that waits for an exponentially-increasing amount of
@@ -55,39 +59,44 @@ pub fn exponential_backoff(
   wait_time wait_time: Int,
   factor factor: Int,
 ) -> Yielder(Int) {
-  custom_backoff(wait_time: wait_time, custom: fn(acc) { acc * factor })
+  custom_backoff(wait_time: wait_time, next_wait_time: fn(previous) {
+    previous * factor
+  })
 }
 
 /// Adds a random integer between [1, `upper_bound`] to each wait time.
 pub fn apply_jitter(
-  yielder yielder: Yielder(Int),
+  wait_stream wait_stream: Yielder(Int),
   upper_bound upper_bound: Int,
 ) -> Yielder(Int) {
-  apply_constant(yielder: yielder, adjustment: int.random(upper_bound) + 1)
+  apply_constant(
+    wait_stream: wait_stream,
+    adjustment: int.random(upper_bound) + 1,
+  )
 }
 
 /// Adds a constant integer to each wait time.
 pub fn apply_constant(
-  yielder yielder: Yielder(Int),
+  wait_stream wait_stream: Yielder(Int),
   adjustment adjustment: Int,
 ) -> Yielder(Int) {
-  yielder |> yielder.map(int.add(_, adjustment))
+  wait_stream |> yielder.map(int.add(_, adjustment))
 }
 
 /// Multiplies each wait time by a constant factor.
 pub fn apply_multiplier(
-  yielder yielder: Yielder(Int),
+  wait_stream wait_stream: Yielder(Int),
   factor factor: Int,
 ) -> Yielder(Int) {
-  yielder |> yielder.map(int.multiply(_, factor))
+  wait_stream |> yielder.map(int.multiply(_, factor))
 }
 
 /// Caps each wait time at a maximum value.
 pub fn apply_cap(
-  yielder yielder: Yielder(Int),
+  wait_stream wait_stream: Yielder(Int),
   max_wait_time max_wait_time: Int,
 ) -> Yielder(Int) {
-  yielder |> yielder.map(int.min(_, max_wait_time))
+  wait_stream |> yielder.map(int.min(_, max_wait_time))
 }
 
 /// Initiates the execution process with the specified operation.
@@ -98,13 +107,13 @@ pub fn apply_cap(
 /// `True` for errors that should trigger another attempt, and `False` for
 /// errors that should not. To allow all errors, use `fn(_) { True }`.
 pub fn execute(
-  yielder yielder: Yielder(Int),
+  wait_stream wait_stream: Yielder(Int),
   allow allow: fn(b) -> Bool,
   max_attempts max_attempts: Int,
   operation operation: fn() -> Result(a, b),
 ) -> RetryResult(a, b) {
   execute_with_wait(
-    yielder: yielder,
+    wait_stream: wait_stream,
     allow: allow,
     max_attempts: max_attempts,
     operation: fn(_) { operation() },
@@ -114,7 +123,7 @@ pub fn execute(
 
 @internal
 pub fn execute_with_wait(
-  yielder yielder: Yielder(Int),
+  wait_stream wait_stream: Yielder(Int),
   allow allow: fn(b) -> Bool,
   max_attempts max_attempts: Int,
   operation operation: fn(Int) -> Result(a, b),
@@ -123,14 +132,14 @@ pub fn execute_with_wait(
   case max_attempts <= 0 {
     True -> RetryData(result: Error(RetriesExhausted([])), wait_times: [])
     False -> {
-      let yielder = yielder |> yielder.take(max_attempts - 1)
-      let yielder =
+      let wait_stream = wait_stream |> yielder.take(max_attempts - 1)
+      let wait_stream =
         yielder.from_list([0])
-        |> yielder.append(yielder)
+        |> yielder.append(wait_stream)
         |> yielder.map(int.max(_, 0))
 
       do_execute(
-        yielder: yielder,
+        wait_stream: wait_stream,
         allow: allow,
         max_attempts: max_attempts,
         operation: operation,
@@ -144,7 +153,7 @@ pub fn execute_with_wait(
 }
 
 fn do_execute(
-  yielder yielder: Yielder(Int),
+  wait_stream wait_stream: Yielder(Int),
   allow allow: fn(b) -> Bool,
   max_attempts max_attempts: Int,
   operation operation: fn(Int) -> Result(a, b),
@@ -153,8 +162,8 @@ fn do_execute(
   errors_acc errors_acc: List(b),
   attempt_number attempt_number: Int,
 ) -> RetryData(a, b) {
-  case yielder |> yielder.step() {
-    yielder.Next(wait_time, yielder) -> {
+  case wait_stream |> yielder.step() {
+    yielder.Next(wait_time, wait_stream) -> {
       wait_function(wait_time)
       let wait_time_acc = [wait_time, ..wait_time_acc]
 
@@ -168,7 +177,7 @@ fn do_execute(
           case allow(error) {
             True ->
               do_execute(
-                yielder: yielder,
+                wait_stream: wait_stream,
                 allow: allow,
                 max_attempts: max_attempts,
                 operation: operation,
