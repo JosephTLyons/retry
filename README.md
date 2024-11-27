@@ -15,9 +15,25 @@ Execute fallible operations multiple times.
 gleam add persevero@1
 ```
 
+A simple example:
+
+```gleam
+import persevero
+
+pub fn main() {
+  use <- persevero.execute(
+    wait_stream: persevero.linear_backoff(50, 10),
+    allow: fn(_) { True },
+    max_attempts: 3,
+  )
+  fallible_operation()
+}
+```
+
+A ridiculous example:
+
 ```gleam
 import gleam/int
-import gleam/io
 import persevero
 
 pub type NetworkError {
@@ -32,9 +48,13 @@ pub fn network_request() -> Result(String, NetworkError) {
 }
 
 pub fn main() {
-  persevero.exponential_backoff(500, 2)
+  persevero.custom_backoff(wait_time: 1000, next_wait_time: fn(previous) {
+    { previous + 100 } * 2
+  })
+  |> persevero.apply_multiplier(3)
   |> persevero.apply_jitter(20)
-  |> persevero.apply_cap(5000)
+  |> persevero.apply_cap(10000)
+  |> persevero.apply_constant(7)
   |> persevero.execute(
     allow: fn(error) {
       case error {
@@ -43,13 +63,16 @@ pub fn main() {
         _ -> False
       }
     },
-    max_attempts: 5,
+    max_attempts: 10,
     operation: network_request,
   )
-  |> io.debug
-  // Error(RetriesExhausted([Timeout(3), Timeout(4), Timeout(2), Timeout(3), Timeout(1)]))
 }
 ```
+
+Note that `execute` takes in a `wait_stream` as its first parameter, which is
+simply a `Yielder(Int)`. This means you can use the
+[yielder](https://hexdocs.pm/gleam_yielder/gleam/yielder.html) package directly
+if you want more control over wait time manipulation.
 
 ## Targets
 
