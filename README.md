@@ -65,10 +65,23 @@ pub fn main() {
 }
 ```
 
-Note that `execute` takes in a `wait_stream` as its first parameter, which is
-simply a `Yielder(Int)`. This means you can use the
-[yielder](https://hexdocs.pm/gleam_yielder/gleam/yielder.html) package directly
-if you want more control over wait time manipulation.
+Use raw [`yielder`](https://hexdocs.pm/gleam_yielder/gleam/yielder.html)s for
+ultimate wait stream manipulation:
+
+```gleam
+import persevero
+import yielder
+
+pub fn main() {
+  use <- persevero.execute(
+    wait_stream: yielder.range(1, 100) |> yielder.intersperse(0),
+    allow: persevero.all_errors,
+    max_attempts: 200,
+  )
+  fallible_operation()
+}
+```
+
 
 ## Targets
 
