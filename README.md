@@ -82,6 +82,10 @@ pub fn main() {
 }
 ```
 
+Note that `persevero` generates a final wait stream with a 0 value at the
+beginning, in the `execute` function, after all transformations to the stream
+have been applied, so the first attempt will never sleep. You do not need to
+account for this in your custom wait stream.
 
 ## Targets
 
