@@ -1,7 +1,7 @@
 name = "persevero"
 version = "0.1.0"
 
-description = "Retry code that can fail."
+description = "Execute fallible operations multiple times.."
 licences = ["Apache-2.0"]
 repository = { type = "github", user = "JosephTLyons", repo = "persevero" }
 
