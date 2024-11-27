@@ -45,11 +45,8 @@ pub fn constant_backoff(wait_time wait_time: Int) -> Yielder(Int) {
 
 /// Produces a delay stream that waits for a linearly-increasing amount of time:
 /// 500, 1000, 1500, ...
-pub fn linear_backoff(
-  wait_time wait_time: Int,
-  increment increment: Int,
-) -> Yielder(Int) {
-  custom_backoff(wait_time: wait_time, custom: fn(acc) { acc + increment })
+pub fn linear_backoff(wait_time wait_time: Int, step step: Int) -> Yielder(Int) {
+  custom_backoff(wait_time: wait_time, custom: fn(acc) { acc + step })
 }
 
 /// Produces a delay stream that waits for an exponentially-increasing amount of
@@ -77,8 +74,16 @@ pub fn apply_constant(
   yielder |> yielder.map(int.add(_, adjustment))
 }
 
-/// Sets a maximum time limit to wait between execution attempts.
-pub fn max_wait_time(
+/// Multiplies each wait time by a constant factor.
+pub fn apply_multiplier(
+  yielder yielder: Yielder(Int),
+  factor factor: Int,
+) -> Yielder(Int) {
+  yielder |> yielder.map(int.multiply(_, factor))
+}
+
+/// Caps each wait time at a maximum value.
+pub fn apply_cap(
   yielder yielder: Yielder(Int),
   max_wait_time max_wait_time: Int,
 ) -> Yielder(Int) {

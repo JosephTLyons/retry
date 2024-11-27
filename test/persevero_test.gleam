@@ -267,7 +267,7 @@ pub fn retry_succeeds_when_all_errors_are_allowed_test() {
   )
 }
 
-pub fn retry_succeeds_on_allowed_errors_apply_constant_after_max_wait_time_test() {
+pub fn retry_succeeds_on_allowed_errors_apply_constant_and_multiplier_test() {
   let times = 4
   let result_returning_function =
     result_returning_function(times: times, results: [
@@ -283,7 +283,42 @@ pub fn retry_succeeds_on_allowed_errors_apply_constant_after_max_wait_time_test(
     ])
 
   persevero.exponential_backoff(50, 2)
-  |> persevero.max_wait_time(100)
+  |> persevero.apply_constant(1)
+  |> persevero.apply_multiplier(3)
+  |> persevero.apply_constant(1)
+  |> persevero.execute_with_wait(
+    wait_function: fake_wait,
+    allow: fn(error) {
+      case error {
+        ConnectionTimeout | ServerUnavailable -> True
+        _ -> False
+      }
+    },
+    max_attempts: times,
+    operation: result_returning_function,
+  )
+  |> should.equal(
+    RetryData(result: Ok(SuccessfulConnection), wait_times: [0, 154, 304]),
+  )
+}
+
+pub fn retry_succeeds_on_allowed_errors_apply_constant_after_cap_test() {
+  let times = 4
+  let result_returning_function =
+    result_returning_function(times: times, results: [
+      // 1, wait 0
+      Error(ConnectionTimeout),
+      // 2, wait 100
+      Error(ServerUnavailable),
+      // 3, wait 100
+      // succeed
+      Ok(SuccessfulConnection),
+      // Doesn't reach
+      Error(InvalidResponse),
+    ])
+
+  persevero.exponential_backoff(50, 2)
+  |> persevero.apply_cap(100)
   |> persevero.apply_constant(3)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
@@ -301,7 +336,7 @@ pub fn retry_succeeds_on_allowed_errors_apply_constant_after_max_wait_time_test(
   )
 }
 
-pub fn retry_succeeds_on_allowed_errors_apply_constant_before_max_wait_time_test() {
+pub fn retry_succeeds_on_allowed_errors_apply_constant_before_cap_test() {
   let times = 4
   let result_returning_function =
     result_returning_function(times: times, results: [
@@ -318,7 +353,7 @@ pub fn retry_succeeds_on_allowed_errors_apply_constant_before_max_wait_time_test
 
   persevero.exponential_backoff(50, 2)
   |> persevero.apply_constant(3)
-  |> persevero.max_wait_time(100)
+  |> persevero.apply_cap(100)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     allow: fn(error) {
@@ -475,7 +510,7 @@ pub fn retry_with_negative_wait_time_configuration_test() {
   )
 }
 
-pub fn retry_with_max_wait_time_configuration_test() {
+pub fn retry_with_cap_configuration_test() {
   let times = 5
   let result_returning_function =
     result_returning_function(times: times, results: [
@@ -495,7 +530,7 @@ pub fn retry_with_max_wait_time_configuration_test() {
     ])
 
   persevero.exponential_backoff(500, 2)
-  |> persevero.max_wait_time(1000)
+  |> persevero.apply_cap(1000)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     allow: fn(error) {
