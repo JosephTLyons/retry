@@ -1,10 +1,12 @@
-import gleam/function
 import gleam/int
 import gleam/option.{None, Some}
 import gleeunit
 import gleeunit/should
 import list_extensions.{at}
-import persevero.{type RetryData, RetriesExhausted, RetryData, UnallowedError}
+import persevero.{
+  type RetryData, RetriesExhausted, RetryData, UnallowedError, constant_backoff,
+  exponential_backoff, linear_backoff, no_backoff,
+}
 
 pub fn main() {
   gleeunit.main()
@@ -21,6 +23,66 @@ type MockNetworkErrorResponse {
   InvalidResponse
 }
 
+pub fn retry_exhausts_all_attempts_and_fails_with_no_backoff_test() {
+  let times = 3
+  let result_returning_function =
+    result_returning_function(times: times, results: [
+      // 1, wait 0
+      Error(ConnectionTimeout),
+      // 2, wait 100
+      Error(ServerUnavailable),
+      // 3, wait 100
+      // error
+      Error(InvalidResponse),
+    ])
+
+  persevero.new(100, no_backoff)
+  |> persevero.execute_with_wait(
+    wait_function: fake_wait,
+    allow: fn(_) { True },
+    max_attempts: times,
+    operation: result_returning_function,
+  )
+  |> should.equal(
+    RetryData(
+      result: Error(
+        RetriesExhausted([ConnectionTimeout, ServerUnavailable, InvalidResponse]),
+      ),
+      wait_times: [0, 0, 0],
+    ),
+  )
+}
+
+pub fn retry_exhausts_all_attempts_and_fails_with_constant_backoff_test() {
+  let times = 3
+  let result_returning_function =
+    result_returning_function(times: times, results: [
+      // 1, wait 0
+      Error(ConnectionTimeout),
+      // 2, wait 100
+      Error(ServerUnavailable),
+      // 3, wait 100
+      // error
+      Error(InvalidResponse),
+    ])
+
+  persevero.new(100, constant_backoff)
+  |> persevero.execute_with_wait(
+    wait_function: fake_wait,
+    allow: fn(_) { True },
+    max_attempts: times,
+    operation: result_returning_function,
+  )
+  |> should.equal(
+    RetryData(
+      result: Error(
+        RetriesExhausted([ConnectionTimeout, ServerUnavailable, InvalidResponse]),
+      ),
+      wait_times: [0, 100, 100],
+    ),
+  )
+}
+
 pub fn negative_retry_attempts_returns_retries_exhausted_error_test() {
   let times = -1
   let result_returning_function =
@@ -30,7 +92,7 @@ pub fn negative_retry_attempts_returns_retries_exhausted_error_test() {
       Error(InvalidResponse),
     ])
 
-  persevero.new(100, function.identity)
+  persevero.new(100, constant_backoff)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     allow: fn(_) { True },
@@ -51,7 +113,7 @@ pub fn no_retry_attempts_returns_retries_exhausted_error_test() {
       Error(InvalidResponse),
     ])
 
-  persevero.new(100, function.identity)
+  persevero.new(100, constant_backoff)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     allow: fn(_) { True },
@@ -72,7 +134,7 @@ pub fn one_retry_attempts_returns_retries_exhausted_error_test() {
       Error(InvalidResponse),
     ])
 
-  persevero.new(100, function.identity)
+  persevero.new(100, constant_backoff)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     allow: fn(_) { True },
@@ -99,7 +161,7 @@ pub fn retry_exhausts_all_attempts_and_fails_test() {
       Error(InvalidResponse),
     ])
 
-  persevero.new(100, function.identity)
+  persevero.new(100, constant_backoff)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     allow: fn(_) { True },
@@ -130,7 +192,7 @@ pub fn retry_fails_on_non_allowed_error_test() {
       Ok(SuccessfulConnection),
     ])
 
-  persevero.new(100, function.identity)
+  persevero.new(100, constant_backoff)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     allow: fn(error) {
@@ -164,7 +226,7 @@ pub fn retry_succeeds_on_allowed_errors_test() {
       Error(InvalidResponse),
     ])
 
-  persevero.new(100, function.identity)
+  persevero.new(100, constant_backoff)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     allow: fn(error) {
@@ -196,7 +258,7 @@ pub fn retry_succeeds_when_all_errors_are_allowed_test() {
       Ok(ValidData),
     ])
 
-  persevero.new(100, function.identity)
+  persevero.new(100, constant_backoff)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     allow: fn(_) { True },
@@ -223,7 +285,7 @@ pub fn retry_succeeds_on_allowed_errors_apply_constant_after_max_wait_time_test(
       Error(InvalidResponse),
     ])
 
-  persevero.new(50, int.multiply(_, 2))
+  persevero.new(50, exponential_backoff(_, 2))
   |> persevero.max_wait_time(100)
   |> persevero.apply_constant(3)
   |> persevero.execute_with_wait(
@@ -257,7 +319,7 @@ pub fn retry_succeeds_on_allowed_errors_apply_constant_before_max_wait_time_test
       Error(InvalidResponse),
     ])
 
-  persevero.new(50, int.multiply(_, 2))
+  persevero.new(50, exponential_backoff(_, 2))
   |> persevero.apply_constant(3)
   |> persevero.max_wait_time(100)
   |> persevero.execute_with_wait(
@@ -291,7 +353,7 @@ pub fn retry_with_exponential_backoff_test() {
       Ok(ValidData),
     ])
 
-  persevero.new(100, int.multiply(_, 2))
+  persevero.new(100, exponential_backoff(_, 2))
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     allow: fn(_) { True },
@@ -318,7 +380,7 @@ pub fn retry_with_linear_backoff_test() {
       Ok(ValidData),
     ])
 
-  persevero.new(100, int.add(_, 100))
+  persevero.new(100, linear_backoff(_, 100))
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     allow: fn(_) { True },
@@ -345,7 +407,9 @@ pub fn retry_with_custom_backoff_test() {
       Ok(ValidData),
     ])
 
-  persevero.new(100, fn(wait) { wait |> int.add(100) |> int.multiply(2) })
+  persevero.new(100, fn(wait) {
+    wait |> linear_backoff(100) |> exponential_backoff(2)
+  })
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     allow: fn(_) { True },
@@ -372,7 +436,7 @@ pub fn retry_with_backoff_succeeds_after_allowed_errors_test() {
       Error(InvalidResponse),
     ])
 
-  persevero.new(100, int.multiply(_, 3))
+  persevero.new(100, exponential_backoff(_, 3))
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     allow: fn(error) {
@@ -404,7 +468,7 @@ pub fn retry_with_negative_wait_time_configuration_test() {
       Error(InvalidResponse),
     ])
 
-  persevero.new(-100, int.subtract(_, 1000))
+  persevero.new(-100, linear_backoff(_, -1000))
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
     allow: fn(_) { True },
@@ -435,7 +499,7 @@ pub fn retry_with_max_wait_time_configuration_test() {
       Error(InvalidResponse),
     ])
 
-  persevero.new(500, int.multiply(_, 2))
+  persevero.new(500, exponential_backoff(_, 2))
   |> persevero.max_wait_time(1000)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
