@@ -1,6 +1,6 @@
 import gleam/option.{None, Some}
 import gleeunit/should
-import list_extensions.{at}
+import internal/list_extensions.{at}
 
 pub fn at_test() {
   let items = ["a", "b", "c"]
