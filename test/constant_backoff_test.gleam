@@ -4,7 +4,7 @@ import internal/mock_types.{
   ValidData,
 }
 import internal/test_utils.{fake_wait, result_returning_function}
-import persevero.{RetriesExhausted, RetryData, UnallowedError}
+import persevero.{RetriesExhausted, RetryData, UnallowedError, all_errors}
 
 // -------------------- Success
 
@@ -58,7 +58,7 @@ pub fn positive_4_constant_backoff_with_all_allowed_errors_is_successful_test() 
   persevero.constant_backoff(100)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
-    allow: fn(_) { True },
+    allow: all_errors,
     max_attempts: times,
     operation: result_returning_function,
   )
@@ -81,7 +81,7 @@ pub fn negative_1_times_fails_with_retries_exhausted_test() {
   persevero.constant_backoff(100)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
-    allow: fn(_) { True },
+    allow: all_errors,
     max_attempts: times,
     operation: result_returning_function,
   )
@@ -102,7 +102,7 @@ pub fn positive_0_times_fails_with_retries_exhausted_test() {
   persevero.constant_backoff(100)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
-    allow: fn(_) { True },
+    allow: all_errors,
     max_attempts: times,
     operation: result_returning_function,
   )
@@ -125,7 +125,7 @@ pub fn positive_1_times_fails_with_retries_exhausted_test() {
   persevero.constant_backoff(100)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
-    allow: fn(_) { True },
+    allow: all_errors,
     max_attempts: times,
     operation: result_returning_function,
   )
@@ -152,7 +152,7 @@ pub fn positive_3_times_fails_with_retries_exhausted_test() {
   persevero.constant_backoff(100)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
-    allow: fn(_) { True },
+    allow: all_errors,
     max_attempts: times,
     operation: result_returning_function,
   )

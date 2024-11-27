@@ -3,7 +3,7 @@ import internal/mock_types.{
   ConnectionTimeout, InvalidResponse, ServerUnavailable, ValidData,
 }
 import internal/test_utils.{fake_wait, result_returning_function}
-import persevero.{RetryData}
+import persevero.{RetryData, all_errors}
 
 // -------------------- Success
 
@@ -27,7 +27,7 @@ pub fn positive_4_custom_backoff_is_successful_test() {
   })
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
-    allow: fn(_) { True },
+    allow: all_errors,
     max_attempts: times,
     operation: result_returning_function,
   )

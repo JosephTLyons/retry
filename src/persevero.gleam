@@ -24,6 +24,12 @@ pub type RetryData(a, b) {
   RetryData(result: RetryResult(a, b), wait_times: List(Int))
 }
 
+/// Convenience function that you can supply to `execute`'s `allow` parameter to
+/// allow all errors.
+pub fn all_errors(_: a) -> Bool {
+  True
+}
+
 /// Produces a delay stream with custom backoff logic.
 pub fn custom_backoff(
   wait_time wait_time: Int,
@@ -105,7 +111,7 @@ pub fn apply_cap(
 /// another attempt. Expects a function that takes an error and returns a
 /// boolean. Use this function to match on the encountered error and return
 /// `True` for errors that should trigger another attempt, and `False` for
-/// errors that should not. To allow all errors, use `fn(_) { True }`.
+/// errors that should not. To allow all errors, use `all_errors`.
 pub fn execute(
   wait_stream wait_stream: Yielder(Int),
   allow allow: fn(b) -> Bool,

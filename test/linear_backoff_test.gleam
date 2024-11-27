@@ -4,7 +4,7 @@ import internal/mock_types.{
   ValidData,
 }
 import internal/test_utils.{fake_wait, result_returning_function}
-import persevero.{RetryData}
+import persevero.{RetryData, all_errors}
 
 // -------------------- Success
 
@@ -26,7 +26,7 @@ pub fn positive_4_linear_backoff_is_successful_test() {
   persevero.linear_backoff(100, 100)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
-    allow: fn(_) { True },
+    allow: all_errors,
     max_attempts: times,
     operation: result_returning_function,
   )
@@ -53,7 +53,7 @@ pub fn positive_4_negative_wait_time_linear_backoff_is_successful_test() {
   persevero.linear_backoff(-100, -1000)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
-    allow: fn(_) { True },
+    allow: all_errors,
     max_attempts: times,
     operation: result_returning_function,
   )

@@ -23,7 +23,7 @@ import persevero
 pub fn main() {
   use <- persevero.execute(
     wait_stream: persevero.linear_backoff(50, 10),
-    allow: fn(_) { True },
+    allow: persevero.all_errors,
     max_attempts: 3,
   )
   fallible_operation()

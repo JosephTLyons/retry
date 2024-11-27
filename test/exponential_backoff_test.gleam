@@ -4,7 +4,7 @@ import internal/mock_types.{
   ValidData,
 }
 import internal/test_utils.{fake_wait, result_returning_function}
-import persevero.{RetryData}
+import persevero.{RetryData, all_errors}
 
 // -------------------- Success
 
@@ -129,7 +129,7 @@ pub fn positive_4_exponential_backoff_on_all_allowed_errors_is_successful_test()
   persevero.exponential_backoff(100, 2)
   |> persevero.execute_with_wait(
     wait_function: fake_wait,
-    allow: fn(_) { True },
+    allow: all_errors,
     max_attempts: times,
     operation: result_returning_function,
   )
