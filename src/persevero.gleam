@@ -155,6 +155,8 @@ pub fn execute_with_wait(
   }
 }
 
+// Swap to yielder.prepend when it's available.
+// https://github.com/gleam-lang/yielder/pull/2
 fn yielder_prepend(yielder: Yielder(a), element: a) -> Yielder(a) {
   use <- yielder.yield(element)
   yielder
