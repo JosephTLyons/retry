@@ -110,3 +110,8 @@ this in your custom wait stream.
 ## Targets
 
 `persevero` supports the Erlang target.
+
+## Inspiration
+
+The feature set, and some of the design, is inspired by the
+[`retry`](https://hex.pm/packages/retry) library for Elixir.
