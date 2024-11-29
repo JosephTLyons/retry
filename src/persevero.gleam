@@ -185,6 +185,7 @@ pub fn execute_with_options(
     attempt_number: 0,
     start_time: clock |> clock.now(),
     duration: 0,
+    previous_wait_time: 0,
   )
 }
 
@@ -215,10 +216,11 @@ fn do_execute(
   attempt_number attempt_number: Int,
   start_time start_time: birl.Time,
   duration duration: Int,
+  previous_wait_time previous_wait_time: Int,
 ) -> RetryData(a, b) {
   let should_execute = case mode {
     MaxAttempts(max_attempts) -> max_attempts > 0
-    Expiry(expiry) -> expiry > 0 && duration < expiry
+    Expiry(expiry) -> expiry > 0 && previous_wait_time + duration <= expiry
   }
 
   case should_execute, wait_stream |> yielder.step() {
@@ -254,6 +256,7 @@ fn do_execute(
                 attempt_number: attempt_number + 1,
                 start_time: start_time,
                 duration:,
+                previous_wait_time: wait_time,
               )
             False ->
               RetryData(

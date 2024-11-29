@@ -359,3 +359,51 @@ pub fn expiry_300_constant_backoff_with_all_allowed_errors_time_exhausted_test()
     ),
   )
 }
+
+// TODO: Test name
+pub fn expiry_300_sconstant_backoff_with_all_allowed_errors_time_exhausted_test() {
+  let fake_clock = fake_clock.new()
+
+  let result_returning_function =
+    result_returning_function(results: [
+      // 1, wait 0, 0
+      Error(ConnectionTimeout),
+      // 2, wait 2 (2)
+      Error(ServerUnavailable),
+      // 3, wait 4 (6)
+      Error(InvalidResponse),
+      // 4, wait 8 (14)
+      Error(ServerUnavailable),
+      // 4, wait would be 16, but but a wait time of 16 + accumulated duration
+      // of 14 would be 30, which exceeds expiry of 15, so skip
+
+      // error, time exhausted
+      Ok(ValidData),
+    ])
+
+  let RetryData(result, wait_times, duration) =
+    persevero.exponential_backoff(2, 2)
+    |> persevero.execute_with_options(
+      allow: persevero.all_errors,
+      mode: Expiry(15),
+      operation: result_returning_function,
+      wait_function: advance_fake_clock(fake_clock, _),
+      clock: clock.from_fake(fake_clock),
+    )
+
+  let expected_wait_times = [0, 2, 4, 8]
+
+  wait_times |> should.equal(expected_wait_times)
+  duration |> should.equal(14)
+  result
+  |> should.equal(
+    Error(
+      TimeExhausted([
+        ConnectionTimeout,
+        ServerUnavailable,
+        InvalidResponse,
+        ServerUnavailable,
+      ]),
+    ),
+  )
+}
