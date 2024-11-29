@@ -78,6 +78,20 @@ pub fn main() {
 }
 ```
 
+Instead of defining a maximum number of attempts, you can use an expiry mode.
+This will cause the operation to cease retrying after a specified duration. It's
+important to note that the expiry mode will not interrupt an operation that is
+currently in progress; the ongoing attempt will be allowed to complete before
+the operation is considered expired.
+
+```gleam
+use <- persevero.execute(
+  wait_stream: persevero.constant_backoff(100),
+  allow: persevero.all_errors,
+  mode: persevero.Expiry(10_000),
+)
+```
+
 Use raw [`yielder`](https://hexdocs.pm/gleam_yielder/gleam/yielder.html)s for
 ultimate wait stream manipulation:
 
