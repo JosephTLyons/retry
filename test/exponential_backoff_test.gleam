@@ -4,7 +4,7 @@ import internal/mock_types.{
   ConnectionTimeout, InvalidResponse, ServerUnavailable, SuccessfulConnection,
   ValidData,
 }
-import internal/test_utils.{fake_wait, result_returning_function}
+import internal/utils.{fake_wait, result_returning_function}
 import persevero.{MaxAttempts, RetryData, all_errors}
 
 // -------------------- Success

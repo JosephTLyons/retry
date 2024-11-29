@@ -6,9 +6,7 @@ import internal/mock_types.{
   ConnectionTimeout, InvalidResponse, ServerUnavailable, SuccessfulConnection,
   ValidData,
 }
-import internal/test_utils.{
-  advance_fake_clock, fake_wait, result_returning_function,
-}
+import internal/utils.{advance_fake_clock, fake_wait, result_returning_function}
 import persevero.{
   Expiry, MaxAttempts, RetriesExhausted, RetryData, TimeExhausted,
   UnallowedError, all_errors,
