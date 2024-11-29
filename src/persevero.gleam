@@ -194,20 +194,13 @@ fn configure_wait_stream(
 ) -> Yielder(Int) {
   let wait_stream =
     wait_stream
-    |> yielder_prepend(0)
+    |> yielder.prepend(0)
     |> yielder.map(int.max(_, 0))
 
   case mode {
     MaxAttempts(max_attempts) -> wait_stream |> yielder.take(max_attempts)
     Expiry(_) -> wait_stream
   }
-}
-
-// Swap to yielder.prepend when it's available.
-// https://github.com/gleam-lang/yielder/pull/2
-fn yielder_prepend(yielder: Yielder(a), element: a) -> Yielder(a) {
-  use <- yielder.yield(element)
-  yielder
 }
 
 fn do_execute(
