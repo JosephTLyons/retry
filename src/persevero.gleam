@@ -259,7 +259,7 @@ fn do_execute(
                 errors_acc: [error, ..errors_acc],
                 attempt_number: attempt_number + 1,
                 start_time: start_time,
-                duration: duration,
+                duration:,
               )
             False ->
               RetryData(
@@ -279,7 +279,7 @@ fn do_execute(
       RetryData(
         result: Error(error),
         wait_times: wait_time_acc |> list.reverse,
-        duration: duration,
+        duration:,
       )
     }
   }
