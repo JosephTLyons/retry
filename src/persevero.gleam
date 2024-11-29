@@ -227,8 +227,6 @@ fn do_execute(
     Expiry(expiry) -> expiry > 0 && duration < expiry
   }
 
-  // TODO: Should expire 0 or less execute once? as there is a zero delay initially - maybe one attempt is permissible?
-
   case should_execute, wait_stream |> yielder.step() {
     True, yielder.Next(wait_time, wait_stream) -> {
       wait_function(wait_time)

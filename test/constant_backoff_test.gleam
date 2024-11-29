@@ -260,6 +260,10 @@ pub fn expiry_negative_1_constant_backoff_with_all_allowed_errors_time_exhausted
   result |> should.equal(Error(TimeExhausted([])))
 }
 
+// I may want to revisit this. I'm not sure if expiry 0, or less than 0, should
+// mean that one attempt is allowed. When set to MaxAttempts(0), we don't allow
+// any attempts, but the first run is a 0 wait delay run, so maybe Expiry(< 0)
+// should allow one attempt.
 pub fn expiry_0_constant_backoff_with_all_allowed_errors_time_exhausted_test() {
   let expiry = 0
   let fake_clock = fake_clock.new()
