@@ -1,23 +1,22 @@
-import gleam/int
-import gleam/option.{None, Some}
+import bigben/fake_clock
+import birl/duration
+import gleam/option.{Some}
 import internal/list_extensions
 
-pub fn fake_wait(_) -> Nil {
+pub fn fake_wait(_: Int) -> Nil {
   Nil
 }
 
+pub fn advance_fake_clock(clock clock: fake_clock.FakeClock, by by: Int) -> Nil {
+  let duration = duration.milli_seconds(by)
+  clock |> fake_clock.advance(duration)
+}
+
 pub fn result_returning_function(
-  times times: Int,
   results results: List(Result(a, b)),
 ) -> fn(Int) -> Result(a, b) {
-  let panic_message =
-    "Need to provide more than " <> times |> int.to_string <> " results"
-
   fn(count) {
-    let result = results |> list_extensions.at(index: count)
-    case result {
-      Some(result) -> result
-      None -> panic as panic_message
-    }
+    let assert Some(result) = results |> list_extensions.at(index: count)
+    result
   }
 }
