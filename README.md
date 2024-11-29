@@ -94,16 +94,18 @@ ultimate wait stream manipulation:
 
 ```gleam
 use <- persevero.execute(
-  wait_stream: yielder.range(1, 100) |> yielder.intersperse(0),
+  wait_stream: yielder.repeat(5)
+    |> yielder.intersperse(10)
+    |> yielder.cycle,
   allow: persevero.all_errors,
-  mode: persevero.MaxAttempts(3),
+  mode: persevero.MaxAttempts(100),
 )
 ```
 
-Note that `persevero` generates a final wait stream with a 0 value at the
-beginning, in the `execute` function, after all transformations to the stream
-have been applied, so the first attempt will never sleep. You do not need to
-account for this in your custom wait stream.
+Note that `persevero` generates a final wait stream with an initial 0 value, in
+the `execute` function, after all transformations to the stream have been
+applied, so the first attempt will never sleep. You do not need to account for
+this in your custom wait stream.
 
 ## Targets
 
