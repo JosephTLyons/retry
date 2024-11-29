@@ -137,7 +137,14 @@ pub type Mode {
   /// Specifies the maximum number of attempts to make.
   MaxAttempts(Int)
 
-  /// Specifies the maximum duration to make attempts for.
+  /// Specifies the maximum duration, in ms, to make attempts for.
+  ///
+  /// Note that `Expiry` mode does not prevent the current wait time from
+  /// spilling over past the timeout. For example, if you're currently under the
+  /// expiry timeout by 1s and your current wait time is 10s, this wait time,
+  /// and the attempt on the operation, will still be run, resulting in
+  /// spillover. Also note that the duration measured includes the time it takes
+  /// to run your operation.
   Expiry(Int)
 }
 
