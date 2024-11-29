@@ -1,7 +1,7 @@
 import gleam/option.{type Option, None, Some}
 
 pub fn at(items items: List(a), index index: Int) -> Option(a) {
-  do_at(items: items, index: index)
+  do_at(items:, index:)
 }
 
 fn do_at(items items: List(a), index index: Int) -> Option(a) {
