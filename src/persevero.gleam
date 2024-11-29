@@ -32,22 +32,8 @@ import birl/duration
 import gleam/erlang/process
 import gleam/function
 import gleam/int
-import gleam/io
 import gleam/list
 import gleam/yielder.{type Yielder}
-
-// TODO: REMOVE
-pub fn main() {
-  {
-    use <- execute(
-      wait_stream: constant_backoff(500),
-      allow: all_errors,
-      mode: Expiry(5000),
-    )
-    Error("Dog")
-  }
-  |> io.debug
-}
 
 /// Represents errors that can occur during execution attempts.
 pub type Error(a) {
@@ -301,5 +287,5 @@ fn do_execute(
   }
 }
 // TODO: Update examples
-// TODO: Changelog, mention breaking change
+// TODO: Changelog, mention breaking change (new error type, mode)
 // TODO: Publish
