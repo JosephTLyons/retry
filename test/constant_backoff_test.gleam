@@ -240,6 +240,7 @@ pub fn positive_3_times_retry_fails_on_non_allowed_error_test() {
   wait_times |> should.equal([0, 100])
 }
 
+// Same as comment below
 pub fn expiry_negative_1_constant_backoff_with_all_allowed_errors_time_exhausted_test() {
   let expiry = -1
   let fake_clock = fake_clock.new()
