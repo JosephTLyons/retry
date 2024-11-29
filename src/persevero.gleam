@@ -136,6 +136,7 @@ pub fn apply_cap(
 pub type Mode {
   /// Specifies the maximum number of attempts to make.
   MaxAttempts(Int)
+
   /// Specifies the maximum duration to make attempts for.
   Expiry(Int)
 }
