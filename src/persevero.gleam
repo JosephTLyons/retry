@@ -13,7 +13,7 @@
 ////     use <- persevero.execute(
 ////       wait_stream: persevero.exponential_backoff(50, 2),
 ////       allow: persevero.all_errors,
-////       max_attempts: 3,
+////       mode: persevero.MaxAttempts(3),
 ////     )
 ////
 ////     httpc.send(request)
@@ -284,6 +284,5 @@ fn do_execute(
     }
   }
 }
-// TODO: Update examples
 // TODO: Changelog, mention breaking change (new error type, mode)
 // TODO: Publish
