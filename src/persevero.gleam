@@ -92,7 +92,7 @@ pub fn linear_backoff(wait_time wait_time: Int, step step: Int) -> Yielder(Int) 
 
 /// Produces a ms wait stream that increases exponentially for each attempt.
 /// time:
-/// Ex: 500ms, 1000ms, 2000ms, 4000ms, ...
+/// Ex: 500ms, 1000ms, 2000ms, ...
 pub fn exponential_backoff(
   wait_time wait_time: Int,
   factor factor: Int,
