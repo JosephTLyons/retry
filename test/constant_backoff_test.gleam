@@ -101,11 +101,7 @@ pub fn expiry_300_constant_backoff_with_all_allowed_errors_is_successful_test() 
       clock: clock.from_fake(fake_clock),
     )
 
-  let attempts = expiry / constant_backoff_time
-  let expected_wait_times = constant_backoff_time |> list.repeat(attempts)
-  let expected_wait_times = [0, ..expected_wait_times]
-
-  wait_times |> should.equal(expected_wait_times)
+  wait_times |> should.equal([0, 100, 100, 100])
   duration |> should.equal(expiry)
   result |> should.equal(Ok(ValidData))
 }
@@ -279,7 +275,7 @@ pub fn expiry_0_constant_backoff_with_all_allowed_errors_time_exhausted_test() {
     )
 
   wait_times |> should.equal([])
-  duration |> should.equal(0)
+  duration |> should.equal(expiry)
   result |> should.equal(Error(TimeExhausted([])))
 }
 
@@ -324,8 +320,7 @@ pub fn expiry_300_constant_backoff_with_all_allowed_errors_time_exhausted_test()
       Error(InvalidResponse),
       // 4, wait 100 (300)
       Error(ServerUnavailable),
-      // 4, wait 100 (400)
-      // error
+      // error - time exhausted
       Ok(ValidData),
     ])
 
@@ -339,11 +334,7 @@ pub fn expiry_300_constant_backoff_with_all_allowed_errors_time_exhausted_test()
       clock: clock.from_fake(fake_clock),
     )
 
-  let attempts = expiry / constant_backoff_time
-  let expected_wait_times = constant_backoff_time |> list.repeat(attempts)
-  let expected_wait_times = [0, ..expected_wait_times]
-
-  wait_times |> should.equal(expected_wait_times)
+  wait_times |> should.equal([0, 100, 100, 100])
   duration |> should.equal(expiry)
   result
   |> should.equal(
