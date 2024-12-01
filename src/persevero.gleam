@@ -64,7 +64,7 @@ pub fn all_errors(_: a) -> Bool {
   True
 }
 
-/// Produces a custom wait stream.
+/// Produces a custom ms wait stream.
 pub fn custom_backoff(
   wait_time wait_time: Int,
   next_wait_time next_wait_time: fn(Int) -> Int,
