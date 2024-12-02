@@ -259,7 +259,7 @@ fn do_execute(
                 clock:,
                 errors_acc: [error, ..errors_acc],
                 attempt_number: attempt_number + 1,
-                start_time: start_time,
+                start_time:,
                 duration:,
               )
             False ->
