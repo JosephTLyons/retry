@@ -8,7 +8,7 @@ Execute fallible operations multiple times.
 ## Installation
 
 ```sh
-gleam add persevero@1
+gleam add persevero
 ```
 
 ## Usage
